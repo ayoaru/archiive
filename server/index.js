@@ -1,7 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-//const Item = require('./models/item');
+const router = express.Router();
+const Item = require('./models/item');
 require('dotenv').config();
 
 const app = express();
@@ -60,15 +61,15 @@ app.get("/closet/read", async (req, res) => {
 app.put("/closet/update/:id", async (req, res) => {
   const item_id = req.params.id;
   await Closet.findByIdAndUpdate(item_id, {
-    name: req.body.name,
-    brand: req.body.brand,
-    category: req.body.category,
-    season: req.body.season,
-    style: req.body.style,
-    primary_color: req.body.primary_color,
-    secondary_color: req.body.secondary_color,
-    fit: req.body.fit,
-    image: req.body.image,
+    name: req.body.data.name,
+    brand: req.body.data.brand,
+    category: req.body.data.category,
+    season: req.body.data.season,
+    style: req.body.data.style,
+    primary_color: req.body.data.primary_color,
+    secondary_color: req.body.data.secondary_color,
+    fit: req.body.data.fit,
+    image: req.body.data.image,
   });
 
   res.send("Item updated successfully!");

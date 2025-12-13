@@ -18,6 +18,10 @@ const NavBar = () => {
     navigate("/pages/addItem");
   };
 
+  const goToSearch = () => {
+    navigate("/pages/searchItem");
+  };
+
   return (
     <React.Fragment>
       <Box sx={{ flexGrow: 1 }}>
@@ -37,6 +41,9 @@ const NavBar = () => {
             </Button>
             <Button color="inherit" onClick={goToAddItem}>
               Add Item
+            </Button>
+            <Button color="inherit" onClick={goToSearch}>
+              Search Item
             </Button>
           </Toolbar>
         </AppBar>
