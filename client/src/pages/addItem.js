@@ -79,12 +79,12 @@ const AddItem = () => {
     const [itemData, setItemData] =useState({
         name: "",
         brand: "",
-        category: "",
+        category: "Tops",
         season: "Any",
         style: "",
         primary_color: "",
         secondary_color: "",
-        fit: "",
+        fit: "Standard",
         image: ""
     });
 
@@ -144,7 +144,7 @@ const AddItem = () => {
                       <TextField
                         label="Name"
                         variant="outlined"
-                        required ={true}
+                        required = {true}
                         sx = {{ width: 225 }}
                         InputLabelProps={{
                           shrink: true,
@@ -229,7 +229,6 @@ const AddItem = () => {
                         InputLabelProps={{
                           shrink: true,
                         }}
-                        type="number"
                         value={itemData.style}
                         name="style"
                         onChange={handleClosetInput}
@@ -244,6 +243,7 @@ const AddItem = () => {
                       <TextField
                         label="Primary Color"
                         variant="outlined"
+                        required = {true}
                         sx = {{ width: 225 }}
                         InputLabelProps={{
                           shrink: true,

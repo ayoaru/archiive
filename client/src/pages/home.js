@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import axios from "axios";
+
+import ItemCard from "../components/ItemCard";
 
 const Home = () => {
   const [closetList, setClosetList] = useState([]);
@@ -20,21 +24,11 @@ const Home = () => {
 
   return (
     <React.Fragment>
-      <h2>My Home</h2>
-      {closetList.map((item) => (
-        <div key={item._id}>
-          <h3>{item.name}</h3>
-          <p>Brand: {item.brand}</p>
-          <p>Category: {item.category}</p>
-          <p>Season: {item.season}</p>
-          <p>Style: {item.style}</p>
-          <p>Primary Color: {item.primary_color}</p>
-          <p>Secondary Color: {item.secondary_color}</p>
-          <p>Fit: {item.fit}</p>
-          {/* <img src={item.image} alt={item.name} width="200" /> */}
-          <hr />
-        </div>
-      ))}
+      <Typography variant="h2" padding={2} paddingLeft={3}>My Closet</Typography>
+      <Stack spacing={2} paddingLeft={2}>
+      {closetList.length !== 0 &&
+        closetList.map((item) => <ItemCard key={item._id} item={item} />)}
+      </Stack>
     </React.Fragment>
   );
 };
