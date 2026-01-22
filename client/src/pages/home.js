@@ -16,7 +16,7 @@ const Home = () => {
     try {
       const response = await axios.get("http://localhost:5000/closet/read");
       setClosetList(response.data);
-      console.log(response.data);
+      //console.log(response.data);
     } catch (e) {
       console.log(e);
     }

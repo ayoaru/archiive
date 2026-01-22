@@ -85,7 +85,7 @@ const UpdateItemComponent = () => {
 
     const getItem = async () => {
         try {
-            const response = await axios.get(`/closet/item/${id}`);
+            const response = await axios.get("/closet/get/" + id);
             if (response.status === 200) {
                 setItemData(response.data);
             }
