@@ -9,6 +9,7 @@ import CardActions from "@mui/material/CardActions";
 import { Button } from "@mui/material";
 import { useNavigate } from "react-router";
 import axios from "axios";
+import ImageIcon from "@mui/icons-material/Image";
 
 const ItemCard = (props) => {
     const [item, setItem] = useState(props.item);
@@ -28,7 +29,7 @@ const ItemCard = (props) => {
                 props.getItem();
             }
         } catch (e) {
-        console.log(e);
+            console.log(e);
         }
     };
 
@@ -37,59 +38,74 @@ const ItemCard = (props) => {
         <Card
             variant="outlined"
             sx={{
-            width: 750,
-            height: 400,
-            display: "flex",
-            justifyContent: "flex-start",
-            flexDirection: "column",
+                width: 750,
+                display: "flex",
+                flexDirection: "column",
             }}
         >
             <CardHeader title={item.name} />
-            <CardContent>
-            <Stack direction="column" spacing={1}>
-                <Typography variant="body1" color="text.primary">
-                {item.brand}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Category: {item.category}
-                </Typography>
-                <Stack direction="column" spacing={2}>
-                <Typography variant="body1" color="text.secondary">
-                    Season: {item.season}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Style: {item.style}
-                </Typography>
-                </Stack>
-                <Stack direction="column" spacing={2}>
-                <Typography variant="body1" color="text.secondary">
-                    Primary Color: {item.primary_color}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Secondary Color: {item.secondary_color}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Fit: {item.fit}
-                </Typography>
-                </Stack>
-            </Stack>
-            </CardContent>
 
-            <CardActions>
+            {/* Image + Info Row */}
+            <Stack direction="row" spacing={2} sx={{ padding: 2 }}>
+
+                {/* Image */}
+                {item.imageUrl ? (
+                    <CardMedia
+                        component="img"
+                        image={item.imageUrl}
+                        alt={item.name}
+                        sx={{ width: 200, height: 200, objectFit: "cover", borderRadius: 1 }}
+                    />
+                ) : (
+                    <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
+                        <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
+                    </Stack>
+                )}
+
+                {/* Item Details */}
+                <CardContent sx={{ padding: 0, flex: 1 }}>
+                    <Stack direction="column" spacing={1}>
+                        <Typography variant="body1" color="text.primary">
+                            {item.brand}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Category: {item.category}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Season: {item.season}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Style: {item.style}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Primary Color: {item.primary_color}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Secondary Color: {item.secondary_color}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Fit: {item.fit}
+                        </Typography>
+                    </Stack>
+                </CardContent>
+            </Stack>
+
+            {/* Buttons */}
+            <CardActions sx={{ padding: 2 }}>
                 <Stack direction="row" gap={2}>
                     <Button
-                    color="primary"
-                    variant="contained"
-                    onClick={() => handleUpdate(item._id)}
+                        color="primary"
+                        variant="contained"
+                        onClick={() => handleUpdate(item._id)}
                     >
-                    Update
+                        Update
                     </Button>
                     <Button
-                    color="error"
-                    variant="contained"
-                    onClick={() => handleDelete(item._id)}
+                        color="error"
+                        variant="contained"
+                        onClick={() => handleDelete(item._id)}
                     >
-                    Delete
+                        Delete
                     </Button>
                 </Stack>
             </CardActions>

@@ -112,36 +112,30 @@ const AddItem = () => {
     };
 
     const saveToCloset = async () => {
-        console.log("Saving item:", itemData);
-        try {
-            // Handle image using FormData
-            const formData = new FormData();
-            if (selectedFile) {
-                formData.append("image", selectedFile);
-            }
+      try {
+        const formData = new FormData();
 
-            // Append text data
-            formData.append("data", JSON.stringify(itemData));
-
-            console.log("Form Data to be sent:");
-            console.log(formData.get("image"));
-
-            const response = await axios.post("/closet/create", formData, {
-              headers: {
-                  "Content-Type": "multipart/form-data",
-              },
-            });
-
-            /* const response = await axios.post("/closet/create", {
-                data: itemData,
-            }); */
-            if (response.status === 200) {
-                console.log("Item saved successfully:", response.data);
-                navigate("/pages/home");
-            }
-        } catch (error) {
-            console.error("Error saving item:", error);
+        if (selectedFile) {
+          formData.append("image", selectedFile);
         }
+
+        Object.keys(itemData).forEach((key) => {
+          formData.append(key, itemData[key]);
+        });
+
+        const response = await axios.post("/closet/create", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        if (response.status === 201) {
+          console.log("Item saved successfully:", response.data);
+          navigate("/pages/home");
+        }
+      } catch (error) {
+        console.error("Error saving item:", error);
+      }
     };
 
     const [previewUrl, setPreviewUrl] = useState(null);
