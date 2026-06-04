@@ -17,6 +17,7 @@ function App() {
           <Route path="/pages/home" element={<Home />} />
           <Route path="/pages/addItem" element={<AddItem />} />
           <Route path="/pages/searchItem" element={<SearchItem />} />
+          <Route path="/closet/update/:id" element={<UpdateItem />} />
         </Routes>
       </Router>
     </React.Fragment>

@@ -5,7 +5,6 @@ import UdpateItemComponent from "../components/UpdateItemComponent";
 const UpdateItem = () => {
   return (
     <React.Fragment>
-      <NavBar />
       <UdpateItemComponent />
     </React.Fragment>
   );

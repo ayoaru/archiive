@@ -1,5 +1,5 @@
 const express = require("express");
-const { PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
 const s3 = require("../config/s3");
@@ -99,8 +99,43 @@ router.get("/closet/get/:id", async (req, res) => {
 });
 
 // Update a closet item by id
-router.put("/closet/update/:id", async (req, res) => {
+router.put("/closet/update/:id", upload.single("image"), async (req, res) => {
   try {
+    const existingItem = await Closet.findById(req.params.id);
+    if (!existingItem) return res.status(404).json({ error: "Item not found" });
+
+    let imageKey = existingItem.image; // keep existing image key by default
+
+    if (req.file) {
+      // Delete old image from S3 if it exists
+      if (existingItem.image) {
+        await s3.send(new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: existingItem.image,
+        }));
+      }
+
+      // Upload new image to S3
+      imageKey = `items/${uuidv4()}`;
+      await s3.send(new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: imageKey,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      }));
+    }
+
+    // If image was removed (no file and image field cleared)
+    if (!req.file && req.body.image === "") {
+      if (existingItem.image) {
+        await s3.send(new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: existingItem.image,
+        }));
+      }
+      imageKey = "";
+    }
+
     await Closet.findByIdAndUpdate(req.params.id, {
       name: req.body.name,
       brand: req.body.brand,
@@ -110,10 +145,10 @@ router.put("/closet/update/:id", async (req, res) => {
       primary_color: req.body.primary_color,
       secondary_color: req.body.secondary_color,
       fit: req.body.fit,
-      image: req.body.image,
+      image: imageKey,
     });
 
-    res.send("Item updated successfully!");
+    res.status(200).send("Item updated successfully!");
   } catch (error) {
     console.error("Error updating item:", error);
     res.status(500).json({ error: error.message });
