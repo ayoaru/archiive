@@ -1,17 +1,32 @@
 const mongoose = require('mongoose');
 
-const itemSchema = new mongoose.Schema({
+const closetItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     brand: { type: String, default: '' },
     category: { type: String, required: true },
     season: { type: String, default: '' },
     style: { type: String, default: '' },
-    primary_color: { type: String, default: '', required : true},
+    primary_color: { type: String, default: '', required: true },
     secondary_color: { type: String, default: '' },
-    fit : { type: String, default: '' },
+    fit: { type: String, default: '' },
     image: { type: String, default: '' },
 });
 
-const Closet = mongoose.model('closet_item', itemSchema);
-const Wishlist = mongoose.model('wishlist_item', itemSchema);
+const wishlistItemSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    brand: { type: String, default: '' },
+    category: { type: String, required: true },
+    season: { type: String, default: '' },
+    style: { type: String, default: '' },
+    primary_color: { type: String, default: '', required: true },
+    secondary_color: { type: String, default: '' },
+    fit: { type: String, default: '' },
+    image: { type: String, default: '' },
+    price: { type: String, default: '' },
+    link: { type: String, default: '' },
+});
+
+const Closet = mongoose.model('closet_item', closetItemSchema);
+const Wishlist = mongoose.model('wishlist_item', wishlistItemSchema);
+
 module.exports = { Closet, Wishlist };
