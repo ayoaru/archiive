@@ -5,6 +5,8 @@ const { v4: uuidv4 } = require("uuid");
 const s3 = require("../config/s3");
 const upload = require("../middleware/upload");
 const { Closet, Wishlist } = require("../models/item");
+const cheerio = require("cheerio");
+const axios = require("axios");
 
 const router = express.Router();
 
@@ -191,6 +193,87 @@ router.post("/wishlist/create", upload.single("image"), async (req, res) => {
   }
 });
 
+// Create wishlist item from URL
+
+// Helper functions, try Shopify product.json first, if that doesn't work
+// then fall back to cheerio scraping instead
+const tryShopify = async (url) => {
+  try {
+    const jsonUrl = url.replace(/\?.*$/, "") + ".json";
+    const response = await axios.get(jsonUrl);
+    const product = response.data.product;
+
+    if (!product) return null;
+
+    return {
+      name: product.title || "",
+      brand: product.vendor || "",
+      category: "",
+      image: product.images?.[0]?.src || "",
+      price: product.variants?.[0]?.price || "",
+      link: url,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const tryScrape = async (url) => {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    });
+
+    const $ = cheerio.load(response.data);
+
+    const name =
+      $('meta[property="og:title"]').attr("content") ||
+      $("h1").first().text().trim() ||
+      "";
+
+    const brand =
+      $('meta[property="og:site_name"]').attr("content") ||
+      $('[class*="brand"]').first().text().trim() ||
+      $('[class*="vendor"]').first().text().trim() ||
+      "";
+
+    const image =
+      $('meta[property="og:image"]').attr("content") ||
+      "";
+
+    if (!name) return null;
+
+    return { name, brand, category: "", image, price: "", link: url };
+  } catch {
+    return null;
+  }
+};
+
+// Wishlist item creation from URL route
+router.post("/wishlist/create/url", async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: "URL is required" });
+
+    const shopifyData = await tryShopify(url);
+    console.log("Shopify result:", shopifyData);
+
+    if (shopifyData) return res.json(shopifyData);
+
+    const scrapedData = await tryScrape(url);
+    console.log("Scrape result:", scrapedData);
+
+    if (scrapedData) return res.json(scrapedData);
+
+    res.status(422).json({ error: "Could not extract product data from this URL" });
+  } catch (error) {
+    console.error("Error scraping URL:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all wishlist items
 router.get("/wishlist/read", async (req, res) => {
   try {
@@ -234,5 +317,6 @@ router.delete("/wishlist/delete/:id", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 module.exports = router;
