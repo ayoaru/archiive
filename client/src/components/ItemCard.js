@@ -4,15 +4,21 @@ import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardMedia from "@mui/material/CardMedia";
 import CardContent from "@mui/material/CardContent";
-import Stack from "@mui/material/Stack"
+import Stack from "@mui/material/Stack";
 import CardActions from "@mui/material/CardActions";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContentText from "@mui/material/DialogContentText";
 import { Button } from "@mui/material";
 import { useNavigate } from "react-router";
 import axios from "axios";
 import ImageIcon from "@mui/icons-material/Image";
 
 const ItemCard = (props) => {
-    const [item, setItem] = useState(props.item);
+    const [item] = useState(props.item);
+    const [deleteOpen, setDeleteOpen] = useState(false);
 
     const navigate = useNavigate();
 
@@ -20,12 +26,12 @@ const ItemCard = (props) => {
         navigate("/closet/update/" + id);
     };
 
-    const handleDelete = async (id) => {
+    const handleDeleteConfirm = async () => {
         try {
-            const response = await axios.delete("/closet/delete/" + id);
-            console.log(response.data);
-            if (response.data === 200) {
+            const response = await axios.delete("/closet/delete/" + item._id);
+            if (response.status === 200) {
                 console.log("Item deleted successfully");
+                setDeleteOpen(false);
                 props.getItem();
             }
         } catch (e) {
@@ -103,7 +109,7 @@ const ItemCard = (props) => {
                     <Button
                         color="error"
                         variant="contained"
-                        onClick={() => handleDelete(item._id)}
+                        onClick={() => setDeleteOpen(true)}
                     >
                         Delete
                     </Button>
@@ -111,6 +117,21 @@ const ItemCard = (props) => {
             </CardActions>
 
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
+            <DialogTitle>Delete Item</DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                    Are you sure you want to delete <strong>{item.name}</strong>? This action cannot be undone.
+                </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setDeleteOpen(false)} color="primary">Cancel</Button>
+                <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
+            </DialogActions>
+        </Dialog>
+
         </React.Fragment>
     );
 };
