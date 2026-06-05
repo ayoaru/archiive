@@ -16,19 +16,19 @@ import { useNavigate } from "react-router";
 import axios from "axios";
 import ImageIcon from "@mui/icons-material/Image";
 
-const ItemCard = (props) => {
+const WishlistItemCard = (props) => {
     const [item] = useState(props.item);
     const [deleteOpen, setDeleteOpen] = useState(false);
 
     const navigate = useNavigate();
 
     const handleUpdate = (id) => {
-        navigate("/closet/update/" + id);
+        navigate("/wishlist/update/" + id);
     };
 
     const handleDeleteConfirm = async () => {
         try {
-            const response = await axios.delete("/closet/delete/" + item._id);
+            const response = await axios.delete("/wishlist/delete/" + item._id);
             if (response.status === 200) {
                 setDeleteOpen(false);
                 props.onDeleteSuccess(item.name);
@@ -77,12 +77,6 @@ const ItemCard = (props) => {
                             Category: {item.category}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
-                            Season: {item.season}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Style: {item.style}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
                             Primary Color: {item.primary_color}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
@@ -90,6 +84,12 @@ const ItemCard = (props) => {
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
                             Fit: {item.fit}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Price: {item.price ? `$${item.price}` : "N/A"}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Link: {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer">{item.link}</a> : "N/A"}
                         </Typography>
                     </Stack>
                 </CardContent>
@@ -135,4 +135,4 @@ const ItemCard = (props) => {
     );
 };
 
-export default ItemCard;
+export default WishlistItemCard;

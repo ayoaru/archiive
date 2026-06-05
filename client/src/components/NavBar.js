@@ -14,6 +14,14 @@ const NavBar = () => {
     navigate("/pages/home");
   };
 
+  const goToCloset = () => {
+    navigate("/pages/closet");
+  };
+
+  const goToWishlist = () => {
+    navigate("/pages/wishlist");
+  };
+
   const goToAddItem = () => {
     navigate("/pages/addItem");
   };
@@ -38,6 +46,12 @@ const NavBar = () => {
             </Typography>
             <Button color="inherit" onClick={goToHome}>
               Home
+            </Button>
+            <Button color="inherit" onClick={goToCloset}>
+              Closet
+            </Button>
+            <Button color="inherit" onClick={goToWishlist}>
+              Wishlist
             </Button>
             <Button color="inherit" onClick={goToAddItem}>
               Add Item
