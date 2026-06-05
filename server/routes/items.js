@@ -15,16 +15,37 @@ const router = express.Router();
 
 // Create a new closet item with image
 router.post("/closet/create", upload.single("image"), async (req, res) => {
+  console.log("req.file:", req.file);
+  console.log("req.body.imageUrl:", req.body.imageUrl);
+  console.log("req.body:", req.body);
   try {
     let imageKey = "";
 
     if (req.file) {
+      // Handle file upload
       imageKey = `items/${uuidv4()}`;
       await s3.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME,
         Key: imageKey,
         Body: req.file.buffer,
         ContentType: req.file.mimetype,
+      }));
+    } else if (req.body.imageUrl) {
+      console.log("Downloading scraped image from:", req.body.imageUrl);
+      const imageResponse = await axios.get(req.body.imageUrl, { responseType: "arraybuffer" });
+      console.log("Image downloaded, size:", imageResponse.data.byteLength);
+
+      // Download scraped image and upload to S3
+      const imageResponse = await axios.get(req.body.imageUrl, { responseType: "arraybuffer" });
+      const buffer = Buffer.from(imageResponse.data);
+      const contentType = imageResponse.headers["content-type"] || "image/jpeg";
+
+      imageKey = `items/${uuidv4()}`;
+      await s3.send(new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: imageKey,
+        Body: buffer,
+        ContentType: contentType,
       }));
     }
 
@@ -184,6 +205,8 @@ router.post("/wishlist/create", upload.single("image"), async (req, res) => {
       secondary_color: req.body.secondary_color,
       fit: req.body.fit,
       image: req.body.image,
+      price: req.body.price,
+      link: req.body.link,
     });
 
     res.status(201).json(newItem);
