@@ -23,11 +23,10 @@ const seasons = [
   { value: "Winter", label: "Winter" }
 ];
 
-const fit = [
+const fitOptions = [
   { value: "Standard", label: "Standard" },
   { value: "Slim", label: "Slim" },
   { value: "Loose", label: "Loose" },
-  { value: "Boxy", label: "Boxy" },
   { value: "Baggy", label: "Baggy" },
   { value: "Oversized", label: "Oversized" }
 ];
@@ -44,7 +43,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-const UpdateItemComponent = () => {
+const UpdateWishlistItemComponent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -59,6 +58,8 @@ const UpdateItemComponent = () => {
     fit: "Standard",
     imageFront: "",
     imageBack: "",
+    price: "",
+    link: "",
   });
 
   const [frontFile, setFrontFile] = useState(null);
@@ -70,7 +71,7 @@ const UpdateItemComponent = () => {
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const response = await axios.get(`/closet/get/${id}`);
+        const response = await axios.get(`/wishlist/get/${id}`);
         const item = response.data;
         setItemData({
           name: item.name || "",
@@ -83,11 +84,13 @@ const UpdateItemComponent = () => {
           fit: item.fit || "Standard",
           imageFront: item.imageFront || "",
           imageBack: item.imageBack || "",
+          price: item.price || "",
+          link: item.link || "",
         });
         if (item.imageFrontUrl) setFrontPreview(item.imageFrontUrl);
         if (item.imageBackUrl) setBackPreview(item.imageBackUrl);
       } catch (error) {
-        console.error("Error fetching item:", error);
+        console.error("Error fetching wishlist item:", error);
       } finally {
         setLoading(false);
       }
@@ -96,7 +99,7 @@ const UpdateItemComponent = () => {
     fetchItem();
   }, [id]);
 
-  const handleClosetInput = (e) => {
+  const handleInput = (e) => {
     const { name, value } = e.target;
     setItemData({ ...itemData, [name]: value });
   };
@@ -157,19 +160,18 @@ const UpdateItemComponent = () => {
         }
       });
 
-      const response = await axios.put(`/closet/update/${id}`, formData, {
+      const response = await axios.put(`/wishlist/update/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (response.status === 200) {
-        navigate("/pages/home");
+        navigate("/pages/wishlist");
       }
     } catch (error) {
-      console.error("Error updating item:", error);
+      console.error("Error updating wishlist item:", error);
     }
   };
 
-  // Reusable image panel
   const ImagePanel = ({ label, preview, onFileChange, onRemove }) => (
     <Grid container direction="column" alignItems="center" gap={1}>
       <Typography variant="subtitle1" fontWeight="bold">{label}</Typography>
@@ -200,7 +202,7 @@ const UpdateItemComponent = () => {
         <Paper elevation={3} style={{ width: 1100, padding: "40px" }}>
           <Grid container direction="column" alignItems="center" gap={3}>
 
-            <Typography variant="h5">Update Item</Typography>
+            <Typography variant="h5">Update Wishlist Item</Typography>
 
             {/* Image Upload Row */}
             <Grid container direction="row" justifyContent="center" gap={6}>
@@ -224,18 +226,18 @@ const UpdateItemComponent = () => {
                 <TextField
                   label="Name" variant="outlined" required
                   InputLabelProps={{ shrink: true }}
-                  value={itemData.name} name="name" onChange={handleClosetInput}
+                  value={itemData.name} name="name" onChange={handleInput}
                 />
                 <TextField
                   label="Brand" variant="outlined"
                   InputLabelProps={{ shrink: true }}
-                  value={itemData.brand} name="brand" onChange={handleClosetInput}
+                  value={itemData.brand} name="brand" onChange={handleInput}
                 />
                 <TextField
                   label="Category" variant="outlined" select
                   InputLabelProps={{ shrink: true }}
                   slotProps={{ select: { native: true } }}
-                  value={itemData.category} name="category" onChange={handleClosetInput}
+                  value={itemData.category} name="category" onChange={handleInput}
                 >
                   {categories.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -245,39 +247,49 @@ const UpdateItemComponent = () => {
                   label="Season" variant="outlined" select
                   InputLabelProps={{ shrink: true }}
                   slotProps={{ select: { native: true } }}
-                  value={itemData.season} name="season" onChange={handleClosetInput}
+                  value={itemData.season} name="season" onChange={handleInput}
                 >
                   {seasons.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </TextField>
+                <TextField
+                  label="Price" variant="outlined"
+                  InputLabelProps={{ shrink: true }}
+                  value={itemData.price} name="price" onChange={handleInput}
+                />
               </Grid>
 
               <Grid container direction="column" gap={2} sx={{ width: 225 }}>
                 <TextField
                   label="Primary Color" variant="outlined" required
                   InputLabelProps={{ shrink: true }}
-                  value={itemData.primary_color} name="primary_color" onChange={handleClosetInput}
+                  value={itemData.primary_color} name="primary_color" onChange={handleInput}
                 />
                 <TextField
                   label="Secondary Color" variant="outlined"
                   InputLabelProps={{ shrink: true }}
-                  value={itemData.secondary_color} name="secondary_color" onChange={handleClosetInput}
+                  value={itemData.secondary_color} name="secondary_color" onChange={handleInput}
                 />
                 <TextField
                   label="Fit" variant="outlined" select
                   InputLabelProps={{ shrink: true }}
                   slotProps={{ select: { native: true } }}
-                  value={itemData.fit} name="fit" onChange={handleClosetInput}
+                  value={itemData.fit} name="fit" onChange={handleInput}
                 >
-                  {fit.map((option) => (
+                  {fitOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </TextField>
                 <TextField
                   label="Style" variant="outlined"
                   InputLabelProps={{ shrink: true }}
-                  value={itemData.style} name="style" onChange={handleClosetInput}
+                  value={itemData.style} name="style" onChange={handleInput}
+                />
+                <TextField
+                  label="Product Link" variant="outlined"
+                  InputLabelProps={{ shrink: true }}
+                  value={itemData.link} name="link" onChange={handleInput}
                 />
               </Grid>
             </Grid>
@@ -293,4 +305,4 @@ const UpdateItemComponent = () => {
   );
 };
 
-export default UpdateItemComponent;
+export default UpdateWishlistItemComponent;
