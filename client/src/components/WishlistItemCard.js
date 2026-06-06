@@ -11,14 +11,16 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContentText from "@mui/material/DialogContentText";
-import { Button } from "@mui/material";
+import { Button, Tabs, Tab, Chip } from "@mui/material";
 import { useNavigate } from "react-router";
 import axios from "axios";
 import ImageIcon from "@mui/icons-material/Image";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 
 const WishlistItemCard = (props) => {
     const [item] = useState(props.item);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [imageTab, setImageTab] = useState(0);
 
     const navigate = useNavigate();
 
@@ -38,6 +40,8 @@ const WishlistItemCard = (props) => {
         }
     };
 
+    const currentImageUrl = imageTab === 0 ? item.imageFrontUrl : item.imageBackUrl;
+
     return (
         <React.Fragment>
         <Card
@@ -48,24 +52,47 @@ const WishlistItemCard = (props) => {
                 flexDirection: "column",
             }}
         >
-            <CardHeader title={item.name} />
+            <CardHeader
+                title={item.name}
+                subheader={item.price ? `£${item.price}` : ""}
+            />
 
             {/* Image + Info Row */}
             <Stack direction="row" spacing={2} sx={{ padding: 2 }}>
 
-                {/* Image */}
-                {item.imageUrl ? (
-                    <CardMedia
-                        component="img"
-                        image={item.imageUrl}
-                        alt={item.name}
-                        sx={{ width: 200, height: 200, objectFit: "cover", borderRadius: 1 }}
-                    />
-                ) : (
-                    <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
-                        <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
-                    </Stack>
-                )}
+                {/* Image with Front/Back Tabs */}
+                <Stack direction="column" spacing={1}>
+                    {(item.imageFrontUrl || item.imageBackUrl) ? (
+                        <>
+                            <Tabs
+                                value={imageTab}
+                                onChange={(e, val) => setImageTab(val)}
+                                variant="fullWidth"
+                                sx={{ minHeight: 32 }}
+                            >
+                                <Tab label="Front" sx={{ minHeight: 32, padding: "4px 8px" }} />
+                                <Tab label="Back" sx={{ minHeight: 32, padding: "4px 8px" }} />
+                            </Tabs>
+                            {currentImageUrl ? (
+                                <CardMedia
+                                    component="img"
+                                    image={currentImageUrl}
+                                    alt={`${item.name} ${imageTab === 0 ? "front" : "back"}`}
+                                    sx={{ width: 200, height: 200, objectFit: "cover", borderRadius: 1 }}
+                                />
+                            ) : (
+                                <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
+                                    <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
+                                    <Typography variant="caption" color="text.secondary">No image</Typography>
+                                </Stack>
+                            )}
+                        </>
+                    ) : (
+                        <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
+                            <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
+                        </Stack>
+                    )}
+                </Stack>
 
                 {/* Item Details */}
                 <CardContent sx={{ padding: 0, flex: 1 }}>
@@ -77,6 +104,12 @@ const WishlistItemCard = (props) => {
                             Category: {item.category}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
+                            Season: {item.season}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
+                            Style: {item.style}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary">
                             Primary Color: {item.primary_color}
                         </Typography>
                         <Typography variant="body1" color="text.secondary">
@@ -85,12 +118,19 @@ const WishlistItemCard = (props) => {
                         <Typography variant="body1" color="text.secondary">
                             Fit: {item.fit}
                         </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Price: {item.price ? `$${item.price}` : "N/A"}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Link: {item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer">{item.link}</a> : "N/A"}
-                        </Typography>
+                        {item.link && (
+                            <Chip
+                                label="View Product"
+                                component="a"
+                                href={item.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                clickable
+                                icon={<OpenInNewIcon />}
+                                size="small"
+                                sx={{ width: "fit-content" }}
+                            />
+                        )}
                     </Stack>
                 </CardContent>
             </Stack>

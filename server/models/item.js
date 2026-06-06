@@ -9,7 +9,8 @@ const closetItemSchema = new mongoose.Schema({
     primary_color: { type: String, default: '', required: true },
     secondary_color: { type: String, default: '' },
     fit: { type: String, default: '' },
-    image: { type: String, default: '' },
+    imageFront: { type: String, default: '' },
+    imageBack: { type: String, default: '' },
 });
 
 const wishlistItemSchema = new mongoose.Schema({
@@ -21,7 +22,8 @@ const wishlistItemSchema = new mongoose.Schema({
     primary_color: { type: String, default: '', required: true },
     secondary_color: { type: String, default: '' },
     fit: { type: String, default: '' },
-    image: { type: String, default: '' },
+    imageFront: { type: String, default: '' },
+    imageBack: { type: String, default: '' },
     price: { type: String, default: '' },
     link: { type: String, default: '' },
 });

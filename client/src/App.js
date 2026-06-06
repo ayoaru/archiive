@@ -7,6 +7,7 @@ import Closet from './pages/closet';
 import Wishlist from './pages/wishlist';
 import AddItem from './pages/addItem';
 import UpdateItem from './pages/updateItem';
+import UpdateWishlistItem from './pages/updateWishlistItem';
 import SearchItem from './pages/searchItem';
 
 function App() {
