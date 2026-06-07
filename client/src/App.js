@@ -23,6 +23,7 @@ function App() {
           <Route path="/pages/addItem" element={<AddItem />} />
           <Route path="/pages/searchItem" element={<SearchItem />} />
           <Route path="/closet/update/:id" element={<UpdateItem />} />
+          <Route path="/wishlist/update/:id" element={<UpdateWishlistItem />} />
         </Routes>
       </Router>
     </React.Fragment>

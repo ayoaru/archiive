@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
-import NavBar from "../components/NavBar";
-import UdpateItemComponent from "../components/UpdateItemComponent";
+import React from "react";
+import UpdateItemComponent from "../components/UpdateItemComponent";
 
 const UpdateItem = () => {
   return (
     <React.Fragment>
-      <UdpateItemComponent />
+      <UpdateItemComponent />
     </React.Fragment>
   );
 };

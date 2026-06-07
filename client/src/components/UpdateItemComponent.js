@@ -162,10 +162,10 @@ const UpdateItemComponent = () => {
       });
 
       if (response.status === 200) {
-        navigate("/pages/home");
+        navigate("/pages/closet");
       }
     } catch (error) {
-      console.error("Error updating item:", error);
+      console.error("Error updating closet item:", error);
     }
   };
 
