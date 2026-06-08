@@ -1,6 +1,7 @@
-A virtual wardrobe app, enabling closet access, management, and styling on the go.
-
 Also see: https://github.com/ayoaru/archiive-bfl-klein/
+
+# Project Description
+A virtual wardrobe app, enabling closet access, management, and styling on the go.
 
 # Getting Started with Create React App
 
