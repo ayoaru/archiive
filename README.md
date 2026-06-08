@@ -1,7 +1,6 @@
-Also see: https://github.com/ayoaru/archiive-bfl-klein/
+A virtual wardrobe app, enabling closet access, management, and styling on the go.
 
-# Project Description
-Archiive is a virtual wardrobe app, enabling closet access on the go.
+Also see: https://github.com/ayoaru/archiive-bfl-klein/
 
 # Getting Started with Create React App
 
