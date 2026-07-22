@@ -151,4 +151,4 @@ Summary of how Archiive evolved, from initial commit to current state:
 
 ## License
 
-Personal project — no license specified.
+Personal project — license unspecified.
