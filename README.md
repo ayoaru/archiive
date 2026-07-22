@@ -145,7 +145,7 @@ Summary of how Archiive evolved, from initial commit to current state:
 
 ### Planned
 
-- Virtual try-on (VTO) model pipeline integration into frontend
+- Virtual try-on (VTO) model pipeline integration into frontend, [see this repo for more information](https://github.com/ayoaru/archiive-bfl-klein)
 - Automated test coverage for API routes and React components
 - Deployment pipeline (CI + hosted client/server/database)
 
