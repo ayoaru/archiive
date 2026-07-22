@@ -4,6 +4,8 @@ A full-stack digital wardrobe manager — catalog your closet, track a shopping 
 
 Built as a MERN-style application (MongoDB, Express, React, Node) with cloud object storage for images and a small web-scraping engine for wishlist imports.
 
+> Related: See [archiive-bfl-klein](https://github.com/ayoaru/archiive-bfl-klein)
+
 ## Overview
 
 Archiive lets a user maintain two structured collections of clothing:
