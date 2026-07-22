@@ -134,15 +134,9 @@ All endpoints are mirrored under `/closet` and `/wishlist`.
 
 ### Completed
 
-**Phase 1 — Core web app (Dec 2025)**
-- Migrated the project into a client/server web app
+- Intialize the project as a client/server web app
 - Closet item create/read/update/delete
 - Tabular search view over closet items (MUI Data Grid)
-
-**Phase 2 — Cloud image hosting (Jan 2026)**
-- Added Cloudinary-based image upload for closet items
-
-**Phase 3 — Storage migration + wishlist (Jun 2026)**
 - Migrated image storage from Cloudinary to AWS S3 with presigned URLs and S3 cleanup on update/delete
 - Introduced the Wishlist collection (separate schema with price + product link)
 - Built the URL-import scraper (Shopify JSON fast path + generic Open Graph fallback)
@@ -152,9 +146,7 @@ All endpoints are mirrored under `/closet` and `/wishlist`.
 
 ### Planned
 
-- User authentication so Archiive supports more than one wardrobe
-- Filtering/sorting the closet and wishlist by category, season, color, etc.
-- Outfit builder — combine closet items into saved outfits
+- Virtual try-on (VTO) model pipeline integration into frontend
 - Automated test coverage for API routes and React components
 - Deployment pipeline (CI + hosted client/server/database)
 
