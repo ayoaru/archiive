@@ -130,19 +130,18 @@ All endpoints are mirrored under `/closet` and `/wishlist`.
 | `PUT` | `/wishlist/update/:id` | Update a wishlist item |
 | `DELETE` | `/wishlist/delete/:id` | Delete a wishlist item and its S3 images |
 
-## Roadmap
+## Roadmap / Build Log
 
-### Completed
+Summary of how Archiive evolved, from initial commit to current state:
 
-- Intialize the project as a client/server web app
-- Closet item create/read/update/delete
-- Tabular search view over closet items (MUI Data Grid)
-- Migrated image storage from Cloudinary to AWS S3 with presigned URLs and S3 cleanup on update/delete
-- Introduced the Wishlist collection (separate schema with price + product link)
-- Built the URL-import scraper (Shopify JSON fast path + generic Open Graph fallback)
-- Reworked the add/update item flow and item deletion (with confirmation + toast feedback)
-- Added front/back image support across closet and wishlist items, with a data migration script for existing records
-- Added Closet/Wishlist navigation
+1. **Client/server scaffold** — migrated the project into a proper client/server app (React frontend, Express API).
+2. **Closet CRUD + search** — closet item create/read/update/delete, with a searchable, sortable data-grid view (MUI Data Grid).
+3. **Cloudinary → AWS S3 migration** — moved image storage off Cloudinary onto AWS S3, generating short-lived presigned URLs on read and cleaning up orphaned objects on every update/delete.
+4. **Wishlist collection** — added a second Mongoose schema (closet fields + price + product link) for items a user wants but doesn't own yet.
+5. **URL-import scraper** — two-stage product scraper for the wishlist: try the retailer's Shopify Storefront JSON endpoint first, fall back to Open Graph meta-tag scraping (`axios` + `cheerio`) for non-Shopify sites.
+6. **Add/update/delete flow rework** — reworked the add-item and update-item flows, wired up item deletion with confirmation dialogs and toast feedback.
+7. **Front/back image support** — extended both schemas from a single `image` field to `imageFront`/`imageBack`, with a [`migrate.js`](server/migrate.js) backfill script to convert existing records without losing data.
+8. **Navigation** — added Closet/Wishlist links to the navbar.
 
 ### Planned
 
