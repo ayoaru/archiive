@@ -1,70 +1,163 @@
-# Getting Started with Create React App
+# Archiive
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack digital wardrobe manager — catalog your closet, track a shopping wishlist, and pull product details straight from a retailer's URL instead of typing them in by hand.
 
-## Available Scripts
+Built as a MERN-style application (MongoDB, Express, React, Node) with cloud object storage for images and a small web-scraping engine for wishlist imports.
 
-In the project directory, you can run:
+## Overview
 
-### `npm start`
+Archiive lets a user maintain two structured collections of clothing:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Closet** — items you own, with brand, category, season, style, color, and fit metadata plus front/back photos.
+- **Wishlist** — items you want, with the same metadata plus price and a link back to the product page.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Rather than manually re-typing product details when adding something to the wishlist, a user can paste a product URL and the backend will attempt to extract the name, brand, price, and images automatically.
 
-### `npm test`
+## Technical Highlights
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+This project was used to get hands-on with a few areas of full-stack engineering:
 
-### `npm run build`
+- **REST API design** — a resource-oriented Express API (`/closet/*`, `/wishlist/*`) with consistent create/read/update/delete semantics across two related but independently-evolving Mongoose schemas.
+- **Cloud object storage with signed access** — images are stored in AWS S3 by key only; the API generates short-lived presigned URLs (`getSignedUrl`) on read instead of storing/exposing permanent public URLs, and cleans up orphaned S3 objects whenever an item's image is replaced or the item is deleted.
+- **Dual-source image ingestion** — an item's photo can come from either a direct file upload (`multer`, in-memory storage, MIME-type + size validation) or a remote URL, with both paths converging on the same S3 upload helper.
+- **Web scraping / structured data extraction** — a two-stage strategy for importing wishlist items from an arbitrary product URL:
+  1. Try the retailer's Shopify Storefront JSON endpoint (`<product-url>.json`) for clean, structured product data.
+  2. Fall back to scraping Open Graph meta tags and heuristics (`cheerio` + `axios`) when a site isn't Shopify-backed.
+- **Schema evolution with data migration** — `server/migrate.js` is a one-off script that migrated existing documents from a single `image` field to separate `imageFront` / `imageBack` fields using MongoDB's aggregation-pipeline `updateMany`, without dropping existing data.
+- **Storage provider migration** — the project originally used Cloudinary for image hosting and was migrated to AWS S3 with presigned URLs as storage needs evolved (see [Roadmap](#roadmap)).
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Architecture
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```
+ React (client)                Express API (server)
+ MUI + react-router    <--->   /closet/*  /wishlist/*
+                                     |
+                                     |  Mongoose
+                                     v
+                                  MongoDB
+                          closet_items / wishlist_items
+                                     |
+                       ------------------------------
+                       |                             |
+                       v                             v
+                    AWS S3                  Shopify JSON / HTML
+              image storage via            scraping (axios + cheerio)
+               presigned URLs               for wishlist URL imports
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Tech Stack
 
-### `npm run eject`
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, React Router 7, Material UI 7 (`@mui/material`, `@mui/x-data-grid`), Axios |
+| Backend | Node.js, Express 5, Mongoose 8 |
+| Database | MongoDB |
+| Object storage | AWS S3 (`@aws-sdk/client-s3`, presigned URLs via `@aws-sdk/s3-request-presigner`) |
+| File uploads | Multer (in-memory, image-only, 5MB limit) |
+| Web scraping | Axios + Cheerio, with a Shopify Storefront JSON fast path |
+| Tooling | Nodemon (dev server), Create React App (`react-scripts`), dotenv |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Project Structure
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+archiive/
+├── client/                 # React app (Create React App)
+│   └── src/
+│       ├── components/     # ItemCard, NavBar, Add/Update forms, etc.
+│       └── pages/          # Home, Closet, Wishlist, Add/Update/Search
+└── server/                 # Express API
+    ├── config/s3.js        # AWS S3 client configuration
+    ├── middleware/upload.js# Multer file-upload middleware
+    ├── models/item.js      # Closet + Wishlist Mongoose schemas
+    ├── routes/items.js     # All closet/wishlist REST endpoints + scraping
+    ├── migrate.js           # One-off data migration script
+    └── index.js             # App entry point
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Getting Started
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Prerequisites
 
-## Learn More
+- Node.js
+- A MongoDB connection string (e.g. MongoDB Atlas)
+- An AWS S3 bucket + credentials
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Setup
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+# Install dependencies for root, client, and server
+npm install
+cd client && npm install
+cd ../server && npm install
+```
 
-### Code Splitting
+Create a `server/.env` file:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+AWS_REGION=your_aws_region
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+S3_BUCKET_NAME=your_bucket_name
+```
 
-### Analyzing the Bundle Size
+Run the app (two terminals):
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+# Terminal 1 — API server (http://localhost:5000)
+cd server && npm run dev
 
-### Making a Progressive Web App
+# Terminal 2 — React client (http://localhost:3000, proxies API calls to :5000)
+cd client && npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## API Reference
 
-### Advanced Configuration
+All endpoints are mirrored under `/closet` and `/wishlist`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/closet/create` | Create a closet item (multipart file upload or image URL) |
+| `GET` | `/closet/read` | List all closet items with presigned image URLs |
+| `GET` | `/closet/get/:id` | Fetch a single closet item |
+| `PUT` | `/closet/update/:id` | Update a closet item, including swapping/clearing images |
+| `DELETE` | `/closet/delete/:id` | Delete a closet item and its S3 images |
+| `POST` | `/wishlist/create` | Create a wishlist item |
+| `POST` | `/wishlist/create/url` | Scrape a product URL for name/brand/price/images |
+| `GET` | `/wishlist/read` | List all wishlist items with presigned image URLs |
+| `GET` | `/wishlist/get/:id` | Fetch a single wishlist item |
+| `PUT` | `/wishlist/update/:id` | Update a wishlist item |
+| `DELETE` | `/wishlist/delete/:id` | Delete a wishlist item and its S3 images |
 
-### Deployment
+## Roadmap
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Completed
 
-### `npm run build` fails to minify
+**Phase 1 — Core web app (Dec 2025)**
+- Migrated the project into a client/server web app
+- Closet item create/read/update/delete
+- Tabular search view over closet items (MUI Data Grid)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Phase 2 — Cloud image hosting (Jan 2026)**
+- Added Cloudinary-based image upload for closet items
+
+**Phase 3 — Storage migration + wishlist (Jun 2026)**
+- Migrated image storage from Cloudinary to AWS S3 with presigned URLs and S3 cleanup on update/delete
+- Introduced the Wishlist collection (separate schema with price + product link)
+- Built the URL-import scraper (Shopify JSON fast path + generic Open Graph fallback)
+- Reworked the add/update item flow and item deletion (with confirmation + toast feedback)
+- Added front/back image support across closet and wishlist items, with a data migration script for existing records
+- Added Closet/Wishlist navigation
+
+### Planned
+
+- User authentication so Archiive supports more than one wardrobe
+- Filtering/sorting the closet and wishlist by category, season, color, etc.
+- Outfit builder — combine closet items into saved outfits
+- Automated test coverage for API routes and React components
+- Deployment pipeline (CI + hosted client/server/database)
+
+## License
+
+Personal project — no license specified.
