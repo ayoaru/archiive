@@ -17,7 +17,11 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 
 // Routes
 const itemsRouter = require("./routes/items.js");
+const outfitsRouter = require("./routes/outfits.js");
+const modelPhotosRouter = require("./routes/modelPhotos.js");
 app.use("/", itemsRouter);
+app.use("/", outfitsRouter);
+app.use("/", modelPhotosRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
