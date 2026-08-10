@@ -1,72 +1,17 @@
 const express = require("express");
-const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { v4: uuidv4 } = require("uuid");
-const s3 = require("../config/s3");
 const upload = require("../middleware/upload");
 const { Closet, Wishlist } = require("../models/item");
 const cheerio = require("cheerio");
 const axios = require("axios");
+const {
+  uploadToS3,
+  deleteFromS3,
+  uploadUrlToS3,
+  generatePresignedUrl,
+  handleImageUpdate,
+} = require("../utils/s3Helpers");
 
 const router = express.Router();
-
-// Helper function to upload a single image to S3
-const uploadToS3 = async (buffer, contentType) => {
-  const key = `items/${uuidv4()}`;
-  await s3.send(new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-  }));
-  return key;
-};
-
-// Helper function to delete a single image from S3
-const deleteFromS3 = async (key) => {
-  if (!key) return;
-  await s3.send(new DeleteObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: key,
-  }));
-};
-
-// Helper function to download a remote image and upload to S3
-const uploadUrlToS3 = async (url) => {
-  const imageResponse = await axios.get(url, { responseType: "arraybuffer" });
-  const buffer = Buffer.from(imageResponse.data);
-  const contentType = imageResponse.headers["content-type"] || "image/jpeg";
-  return await uploadToS3(buffer, contentType);
-};
-
-// Helper function to generate a presigned URL
-const generatePresignedUrl = async (key) => {
-  if (!key) return null;
-  return await getSignedUrl(
-    s3,
-    new GetObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: key,
-    }),
-    { expiresIn: 3600 }
-  );
-};
-
-// Helper function to handle image field updates
-const handleImageUpdate = async (existingKey, newFile, newUrl, cleared) => {
-  if (newFile) {
-    await deleteFromS3(existingKey);
-    return await uploadToS3(newFile.buffer, newFile.mimetype);
-  } else if (newUrl) {
-    await deleteFromS3(existingKey);
-    return await uploadUrlToS3(newUrl);
-  } else if (cleared) {
-    await deleteFromS3(existingKey);
-    return "";
-  }
-  return existingKey;
-};
-
 
 // ============= Closet Routes =============
 
