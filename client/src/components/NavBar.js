@@ -22,6 +22,10 @@ const NavBar = () => {
     navigate("/pages/wishlist");
   };
 
+  const goToOutfit = () => {
+    navigate("/pages/outfit");
+  };
+
   const goToAddItem = () => {
     navigate("/pages/addItem");
   };
@@ -52,6 +56,9 @@ const NavBar = () => {
             </Button>
             <Button color="inherit" onClick={goToWishlist}>
               Wishlist
+            </Button>
+            <Button color="inherit" onClick={goToOutfit}>
+              Outfits
             </Button>
             <Button color="inherit" onClick={goToAddItem}>
               Add Item

@@ -1,36 +1,65 @@
 const express = require("express");
+const upload = require("../middleware/upload");
 const { Outfit } = require("../models/outfit");
-const { deleteFromS3, generatePresignedUrl } = require("../utils/s3Helpers");
+const {
+  uploadToS3,
+  deleteFromS3,
+  generatePresignedUrl,
+  handleImageUpdate,
+} = require("../utils/s3Helpers");
 
 const router = express.Router();
+const uploadPreviewImage = upload.single("previewImage");
 
-// Attach presigned image URLs to a populated outfit's items and try-on image
+// Attach presigned image URLs to a populated closet item
+const presignItem = async (item) => {
+  if (!item || !item._id) return item;
+  return {
+    ...item,
+    imageFrontUrl: await generatePresignedUrl(item.imageFront),
+    imageBackUrl: await generatePresignedUrl(item.imageBack),
+  };
+};
+
+// Attach presigned image URLs to a populated outfit's base, items, and preview image
 const withPresignedUrls = async (outfit) => {
   const obj = outfit.toObject();
 
-  obj.items = await Promise.all(
-    (obj.items || []).map(async (item) => {
-      if (!item || !item._id) return item;
-      return {
-        ...item,
-        imageFrontUrl: await generatePresignedUrl(item.imageFront),
-        imageBackUrl: await generatePresignedUrl(item.imageBack),
-      };
-    })
-  );
+  obj.base = {
+    top: await presignItem(obj.base?.top),
+    pants: await presignItem(obj.base?.pants),
+    shoes: await presignItem(obj.base?.shoes),
+  };
 
-  obj.tryOnImageUrl = await generatePresignedUrl(obj.tryOnImage);
+  obj.items = await Promise.all((obj.items || []).map(presignItem));
+
+  obj.previewImageUrl = await generatePresignedUrl(obj.previewImage);
   return obj;
 };
 
+const populateOutfit = (query) =>
+  query.populate("base.top").populate("base.pants").populate("base.shoes").populate("items");
+
+// `base` and `items` arrive as JSON strings over multipart/form-data
+const parseOutfitBody = (body) => ({
+  name: body.name,
+  base: body.base ? JSON.parse(body.base) : undefined,
+  items: body.items ? JSON.parse(body.items) : [],
+  season: body.season,
+  occasion: body.occasion,
+});
+
 // Create a new outfit
-router.post("/outfits/create", async (req, res) => {
+router.post("/outfits/create", uploadPreviewImage, async (req, res) => {
   try {
+    let previewImageKey = "";
+    if (req.file) {
+      previewImageKey = await uploadToS3(req.file.buffer, req.file.mimetype, "outfits");
+    }
+
     const newOutfit = await Outfit.create({
-      name: req.body.name,
-      items: req.body.items || [],
-      season: req.body.season,
-      occasion: req.body.occasion,
+      ...parseOutfitBody(req.body),
+      previewImage: previewImageKey,
     });
 
     res.status(201).json(newOutfit);
@@ -40,10 +69,10 @@ router.post("/outfits/create", async (req, res) => {
   }
 });
 
-// Get all outfits with populated items and presigned URLs
+// Get all outfits with populated base/items and presigned URLs
 router.get("/outfits/read", async (req, res) => {
   try {
-    const outfits = await Outfit.find().populate("items");
+    const outfits = await populateOutfit(Outfit.find());
     const outfitsWithUrls = await Promise.all(outfits.map(withPresignedUrls));
 
     res.json(outfitsWithUrls);
@@ -56,7 +85,7 @@ router.get("/outfits/read", async (req, res) => {
 // Get a single outfit by id
 router.get("/outfits/get/:id", async (req, res) => {
   try {
-    const outfit = await Outfit.findById(req.params.id).populate("items");
+    const outfit = await populateOutfit(Outfit.findById(req.params.id));
     if (!outfit) return res.status(404).json({ error: "Outfit not found" });
 
     res.json(await withPresignedUrls(outfit));
@@ -67,17 +96,23 @@ router.get("/outfits/get/:id", async (req, res) => {
 });
 
 // Update an outfit by id
-router.put("/outfits/update/:id", async (req, res) => {
+router.put("/outfits/update/:id", uploadPreviewImage, async (req, res) => {
   try {
     const existingOutfit = await Outfit.findById(req.params.id);
     if (!existingOutfit) return res.status(404).json({ error: "Outfit not found" });
 
+    const previewImageKey = await handleImageUpdate(
+      existingOutfit.previewImage,
+      req.file,
+      null,
+      req.body.previewImage === "",
+      "outfits"
+    );
+
     await Outfit.findByIdAndUpdate(req.params.id, {
-      name: req.body.name,
-      items: req.body.items || [],
-      season: req.body.season,
-      occasion: req.body.occasion,
-    });
+      ...parseOutfitBody(req.body),
+      previewImage: previewImageKey,
+    }, { runValidators: true });
 
     res.status(200).send("Outfit updated successfully!");
   } catch (error) {
@@ -92,7 +127,7 @@ router.delete("/outfits/delete/:id", async (req, res) => {
     const outfit = await Outfit.findById(req.params.id);
     if (!outfit) return res.status(404).json({ error: "Outfit not found" });
 
-    await deleteFromS3(outfit.tryOnImage);
+    await deleteFromS3(outfit.previewImage);
     await Outfit.findByIdAndDelete(req.params.id);
 
     res.status(200).send("Outfit deleted successfully!");
