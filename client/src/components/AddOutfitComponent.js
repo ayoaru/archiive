@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
@@ -14,7 +14,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { styled } from "@mui/system";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import ItemCollage from "./ItemCollage";
+import CollageEditor from "./CollageEditor";
 
 const VisuallyHiddenInput = styled("input")({
     clip: "rect(0 0 0 0)",
@@ -31,18 +31,26 @@ const VisuallyHiddenInput = styled("input")({
 // Top-tier -> second-tier tab mapping, backed by the existing closet item categories
 const CATEGORY_TABS = {
     Clothing: ["Tops", "Bottoms", "Outerwear", "Shoes"],
-    Accessories: ["Earrings", "Necklaces", "Bracelets", "Rings", "Hats", "Bags", "Belts", "Scarves"],
+    Accessories: ["Accessories"],
 };
 
 // The outfit base is derived from whatever's picked, not chosen explicitly:
 // the first selected item of each of these categories fills that base slot.
 const BASE_SLOT_BY_CATEGORY = { Tops: "top", Bottoms: "pants", Shoes: "shoes" };
 
+const seasons = [
+    { value: "Any", label: "Any" },
+    { value: "Spring", label: "Spring" },
+    { value: "Summer", label: "Summer" },
+    { value: "Fall", label: "Fall" },
+    { value: "Winter", label: "Winter" },
+];
+
 const AddOutfitComponent = () => {
     const navigate = useNavigate();
 
     const [name, setName] = useState("");
-    const [season, setSeason] = useState("");
+    const [season, setSeason] = useState("Any");
     const [occasion, setOccasion] = useState("");
 
     const [closetItems, setClosetItems] = useState([]);
@@ -56,6 +64,9 @@ const AddOutfitComponent = () => {
     const [previewFileUrl, setPreviewFileUrl] = useState(null);
 
     const [error, setError] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    const collageRef = useRef(null);
 
     useEffect(() => {
         getClosetItems();
@@ -128,6 +139,7 @@ const AddOutfitComponent = () => {
             return;
         }
         setError("");
+        setSaving(true);
 
         try {
             const formData = new FormData();
@@ -140,7 +152,13 @@ const AddOutfitComponent = () => {
                 shoes: base.shoes._id,
             }));
             formData.append("items", JSON.stringify(extraItems.map((i) => i._id)));
-            if (previewFile) formData.append("previewImage", previewFile);
+
+            if (previewFile) {
+                formData.append("previewImage", previewFile);
+            } else {
+                const collageBlob = await collageRef.current?.getFlattenedBlob();
+                if (collageBlob) formData.append("previewImage", collageBlob, "collage.png");
+            }
 
             const response = await axios.post("/outfits/create", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
@@ -152,16 +170,18 @@ const AddOutfitComponent = () => {
         } catch (e) {
             console.log(e);
             setError("Something went wrong saving this outfit.");
+        } finally {
+            setSaving(false);
         }
     };
 
     return (
-        <Box sx={{ padding: 3 }}>
+        <Box sx={{ padding: 3, display: "flex", flexDirection: "column", alignItems: "center" }}>
             <Typography variant="h4" gutterBottom>
                 New Outfit
             </Typography>
 
-            <Grid container spacing={4}>
+            <Grid container spacing={4} justifyContent="center" sx={{ maxWidth: 1200 }}>
 
                 {/* Left: preview + actions */}
                 <Grid item>
@@ -171,10 +191,10 @@ const AddOutfitComponent = () => {
                                 component="img"
                                 src={previewFileUrl}
                                 alt="Outfit preview"
-                                sx={{ width: 260, height: 260, objectFit: "cover", borderRadius: 1 }}
+                                sx={{ width: 500, height: 500, objectFit: "cover", borderRadius: 1 }}
                             />
                         ) : (
-                            <ItemCollage items={selectedItems} size={260} />
+                            <CollageEditor ref={collageRef} items={selectedItems} size={500} />
                         )}
 
                         <Stack direction="row" gap={1}>
@@ -201,7 +221,14 @@ const AddOutfitComponent = () => {
                     <Stack spacing={2}>
                         <Stack direction="row" spacing={2}>
                             <TextField label="Outfit Name" value={name} onChange={(e) => setName(e.target.value)} size="small" />
-                            <TextField label="Season" value={season} onChange={(e) => setSeason(e.target.value)} size="small" />
+                            <TextField
+                                label="Season" variant="outlined" select size="small"
+                                InputLabelProps={{ shrink: true }}
+                                slotProps={{ select: { native: true } }}
+                                value={season} onChange={(e) => setSeason(e.target.value)}
+                            >
+                                {seasons.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </TextField>
                             <TextField label="Occasion" value={occasion} onChange={(e) => setOccasion(e.target.value)} size="small" />
                         </Stack>
 
@@ -269,7 +296,9 @@ const AddOutfitComponent = () => {
                         </Grid>
 
                         <Stack direction="row" spacing={2} alignItems="center">
-                            <Button variant="contained" onClick={handleSave}>Save Outfit</Button>
+                            <Button variant="contained" onClick={handleSave} disabled={saving}>
+                                {saving ? "Saving…" : "Save Outfit"}
+                            </Button>
                             {error && <Typography color="error" variant="body2">{error}</Typography>}
                         </Stack>
                     </Stack>
