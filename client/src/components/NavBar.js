@@ -6,6 +6,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { UserButton } from "@clerk/react";
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -66,6 +67,9 @@ const NavBar = () => {
             <Button color="inherit" onClick={goToSearch}>
               Search Item
             </Button>
+            <Box sx={{ ml: 2, display: "flex" }}>
+              <UserButton />
+            </Box>
           </Toolbar>
         </AppBar>
       </Box>

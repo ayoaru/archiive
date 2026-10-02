@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const outfitSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
     name: { type: String, default: '' },
     base: {
         top: { type: mongoose.Schema.Types.ObjectId, ref: 'closet_item', required: true },

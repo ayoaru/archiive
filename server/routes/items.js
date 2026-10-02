@@ -43,6 +43,7 @@ router.post("/closet/create", uploadFields, async (req, res) => {
     }
 
     const newItem = await Closet.create({
+      userId: req.userId,
       name: req.body.name,
       brand: req.body.brand,
       category: req.body.category,
@@ -65,7 +66,7 @@ router.post("/closet/create", uploadFields, async (req, res) => {
 // Get all closet items with presigned URLs
 router.get("/closet/read", async (req, res) => {
   try {
-    const items = await Closet.find();
+    const items = await Closet.find({ userId: req.userId });
 
     const itemsWithUrls = await Promise.all(
       items.map(async (item) => {
@@ -86,7 +87,7 @@ router.get("/closet/read", async (req, res) => {
 // Get a single closet item by id
 router.get("/closet/get/:id", async (req, res) => {
   try {
-    const item = await Closet.findById(req.params.id);
+    const item = await Closet.findOne({ _id: req.params.id, userId: req.userId });
     if (!item) return res.status(404).json({ error: "Item not found" });
 
     const obj = item.toObject();
@@ -103,7 +104,7 @@ router.get("/closet/get/:id", async (req, res) => {
 // Update a closet item by id
 router.put("/closet/update/:id", uploadFields, async (req, res) => {
   try {
-    const existingItem = await Closet.findById(req.params.id);
+    const existingItem = await Closet.findOne({ _id: req.params.id, userId: req.userId });
     if (!existingItem) return res.status(404).json({ error: "Item not found" });
 
     const imageFrontKey = await handleImageUpdate(
@@ -120,7 +121,7 @@ router.put("/closet/update/:id", uploadFields, async (req, res) => {
       req.body.imageBack === ""
     );
 
-    await Closet.findByIdAndUpdate(req.params.id, {
+    await Closet.findOneAndUpdate({ _id: req.params.id, userId: req.userId }, {
       name: req.body.name,
       brand: req.body.brand,
       category: req.body.category,
@@ -143,12 +144,12 @@ router.put("/closet/update/:id", uploadFields, async (req, res) => {
 // Delete a closet item by id
 router.delete("/closet/delete/:id", async (req, res) => {
   try {
-    const item = await Closet.findById(req.params.id);
+    const item = await Closet.findOne({ _id: req.params.id, userId: req.userId });
     if (!item) return res.status(404).json({ error: "Item not found" });
 
     await deleteFromS3(item.imageFront);
     await deleteFromS3(item.imageBack);
-    await Closet.findByIdAndDelete(req.params.id);
+    await Closet.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     res.status(200).send("Item deleted successfully!");
   } catch (error) {
@@ -180,6 +181,7 @@ router.post("/wishlist/create", uploadFields, async (req, res) => {
     }
 
     const newItem = await Wishlist.create({
+      userId: req.userId,
       name: req.body.name,
       brand: req.body.brand,
       category: req.body.category,
@@ -306,7 +308,7 @@ router.post("/wishlist/create/url", async (req, res) => {
 // Get all wishlist items with presigned URLs
 router.get("/wishlist/read", async (req, res) => {
   try {
-    const items = await Wishlist.find();
+    const items = await Wishlist.find({ userId: req.userId });
 
     const itemsWithUrls = await Promise.all(
       items.map(async (item) => {
@@ -327,7 +329,7 @@ router.get("/wishlist/read", async (req, res) => {
 // Get a single wishlist item by id
 router.get("/wishlist/get/:id", async (req, res) => {
   try {
-    const item = await Wishlist.findById(req.params.id);
+    const item = await Wishlist.findOne({ _id: req.params.id, userId: req.userId });
     if (!item) return res.status(404).json({ error: "Item not found" });
 
     const obj = item.toObject();
@@ -344,7 +346,7 @@ router.get("/wishlist/get/:id", async (req, res) => {
 // Update a wishlist item by id
 router.put("/wishlist/update/:id", uploadFields, async (req, res) => {
   try {
-    const existingItem = await Wishlist.findById(req.params.id);
+    const existingItem = await Wishlist.findOne({ _id: req.params.id, userId: req.userId });
     if (!existingItem) return res.status(404).json({ error: "Item not found" });
 
     const imageFrontKey = await handleImageUpdate(
@@ -361,7 +363,7 @@ router.put("/wishlist/update/:id", uploadFields, async (req, res) => {
       req.body.imageBack === ""
     );
 
-    await Wishlist.findByIdAndUpdate(req.params.id, {
+    await Wishlist.findOneAndUpdate({ _id: req.params.id, userId: req.userId }, {
       name: req.body.name,
       brand: req.body.brand,
       category: req.body.category,
@@ -386,12 +388,12 @@ router.put("/wishlist/update/:id", uploadFields, async (req, res) => {
 // Delete a wishlist item by id
 router.delete("/wishlist/delete/:id", async (req, res) => {
   try {
-    const item = await Wishlist.findById(req.params.id);
+    const item = await Wishlist.findOne({ _id: req.params.id, userId: req.userId });
     if (!item) return res.status(404).json({ error: "Item not found" });
 
     await deleteFromS3(item.imageFront);
     await deleteFromS3(item.imageBack);
-    await Wishlist.findByIdAndDelete(req.params.id);
+    await Wishlist.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     res.status(200).send("Wishlist item deleted successfully!");
   } catch (error) {

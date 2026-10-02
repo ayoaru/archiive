@@ -1,7 +1,10 @@
 import './App.css';
 import React from 'react';
-import NavBar from './components/NavBar';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { ClerkProvider } from '@clerk/react';
+import { AxiosAuth } from './auth';
+import ProtectedRoute from './components/ProtectedRoute';
+import { SignInPage, SignUpPage } from './pages/signIn';
 import Home from './pages/home';
 import Closet from './pages/closet';
 import Wishlist from './pages/wishlist';
@@ -13,12 +16,24 @@ import UpdateOutfit from './pages/updateOutfit';
 import UpdateWishlistItem from './pages/updateWishlistItem';
 import SearchItem from './pages/searchItem';
 
-function App() {
+// Lives inside the Router so Clerk can navigate with react-router.
+const ClerkWithRoutes = () => {
+  const navigate = useNavigate();
+
   return (
-    <React.Fragment>
-      <Router>
-        <NavBar />
-        <Routes>
+    <ClerkProvider
+      publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}
+      routerPush={(to) => navigate(to)}
+      routerReplace={(to) => navigate(to, { replace: true })}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignOutUrl="/sign-in"
+    >
+      <AxiosAuth />
+      <Routes>
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
           <Route path="/pages/home" element={<Home />} />
           <Route path="/pages/closet" element={<Closet />} />
@@ -30,7 +45,17 @@ function App() {
           <Route path="/closet/update/:id" element={<UpdateItem />} />
           <Route path="/outfit/update/:id" element={<UpdateOutfit />} />
           <Route path="/wishlist/update/:id" element={<UpdateWishlistItem />} />
-        </Routes>
+        </Route>
+      </Routes>
+    </ClerkProvider>
+  );
+};
+
+function App() {
+  return (
+    <React.Fragment>
+      <Router>
+        <ClerkWithRoutes />
       </Router>
     </React.Fragment>
   );

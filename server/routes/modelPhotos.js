@@ -19,6 +19,7 @@ router.post("/model-photos/create", uploadImage, async (req, res) => {
     const imageKey = await uploadToS3(req.file.buffer, req.file.mimetype, "model-photos");
 
     const newModelPhoto = await ModelPhoto.create({
+      userId: req.userId,
       label: req.body.label,
       image: imageKey,
     });
@@ -33,7 +34,7 @@ router.post("/model-photos/create", uploadImage, async (req, res) => {
 // Get all model photos with presigned URLs
 router.get("/model-photos/read", async (req, res) => {
   try {
-    const modelPhotos = await ModelPhoto.find();
+    const modelPhotos = await ModelPhoto.find({ userId: req.userId });
 
     const modelPhotosWithUrls = await Promise.all(
       modelPhotos.map(async (photo) => {
@@ -53,7 +54,7 @@ router.get("/model-photos/read", async (req, res) => {
 // Update a model photo's label and/or image by id
 router.put("/model-photos/update/:id", uploadImage, async (req, res) => {
   try {
-    const existingPhoto = await ModelPhoto.findById(req.params.id);
+    const existingPhoto = await ModelPhoto.findOne({ _id: req.params.id, userId: req.userId });
     if (!existingPhoto) return res.status(404).json({ error: "Model photo not found" });
 
     const imageKey = await handleImageUpdate(
@@ -64,7 +65,7 @@ router.put("/model-photos/update/:id", uploadImage, async (req, res) => {
       "model-photos"
     );
 
-    await ModelPhoto.findByIdAndUpdate(req.params.id, {
+    await ModelPhoto.findOneAndUpdate({ _id: req.params.id, userId: req.userId }, {
       label: req.body.label,
       image: imageKey,
     });
@@ -79,11 +80,11 @@ router.put("/model-photos/update/:id", uploadImage, async (req, res) => {
 // Delete a model photo by id
 router.delete("/model-photos/delete/:id", async (req, res) => {
   try {
-    const photo = await ModelPhoto.findById(req.params.id);
+    const photo = await ModelPhoto.findOne({ _id: req.params.id, userId: req.userId });
     if (!photo) return res.status(404).json({ error: "Model photo not found" });
 
     await deleteFromS3(photo.image);
-    await ModelPhoto.findByIdAndDelete(req.params.id);
+    await ModelPhoto.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     res.status(200).send("Model photo deleted successfully!");
   } catch (error) {

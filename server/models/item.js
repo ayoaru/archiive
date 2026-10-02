@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const closetItemSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     brand: { type: String, default: '' },
     category: { type: String, required: true },
@@ -14,6 +15,7 @@ const closetItemSchema = new mongoose.Schema({
 });
 
 const wishlistItemSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
     name: { type: String, required: true },
     brand: { type: String, default: '' },
     category: { type: String, required: true },
