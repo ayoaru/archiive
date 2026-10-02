@@ -17,7 +17,6 @@ const randomizeMessage = () => {
     `Feeling bold today, ${name}?`,
     `Looking for some inspo, ${name}?`,
     `Ready for a new look, ${name}?`,
-    `Careful, ${name}, these looks can kill!`,
     `A new day, a new outfit, ${name}!`,
     `Did someone already say you look good today, ${name}?`,
   ];
