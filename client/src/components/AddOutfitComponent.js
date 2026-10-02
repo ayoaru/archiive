@@ -31,7 +31,7 @@ const VisuallyHiddenInput = styled("input")({
 // Top-tier -> second-tier tab mapping, backed by the existing closet item categories
 const CATEGORY_TABS = {
     Clothing: ["Tops", "Bottoms", "Outerwear", "Shoes"],
-    Accessories: ["Accessories"],
+    Accessories: ["Earrings", "Necklaces", "Bracelets", "Rings", "Hats", "Bags", "Belts", "Scarves"],
 };
 
 // The outfit base is derived from whatever's picked, not chosen explicitly:
