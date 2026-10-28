@@ -1,79 +1,72 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { UserButton } from "@clerk/react";
+import { SERIF, monoLabel } from "../theme";
+import ModeToggle from "./ModeToggle";
+
+const LINKS = [
+  { label: "Home", path: "/pages/home" },
+  { label: "Closet", path: "/pages/closet" },
+  { label: "Outfits", path: "/pages/outfit" },
+  { label: "Wishlist", path: "/pages/wishlist" },
+  { label: "Search", path: "/pages/searchItem" },
+];
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
-  const goToHome = () => {
-    navigate("/pages/home");
-  };
-
-  const goToCloset = () => {
-    navigate("/pages/closet");
-  };
-
-  const goToWishlist = () => {
-    navigate("/pages/wishlist");
-  };
-
-  const goToOutfit = () => {
-    navigate("/pages/outfit");
-  };
-
-  const goToAddItem = () => {
-    navigate("/pages/addItem");
-  };
-
-  const goToSearch = () => {
-    navigate("/pages/searchItem");
-  };
+  const isActive = (path) =>
+    pathname === path || (path === "/pages/home" && pathname === "/");
 
   return (
-    <React.Fragment>
-      <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static">
-          <Toolbar>
-            <Typography
-              variant="h6"
-              component="div"
+    <AppBar position="static" sx={{ borderBottom: 1, borderColor: "divider" }}>
+      <Toolbar sx={{ gap: 3, px: { xs: 2, sm: 4 } }}>
+        <Typography
+          component="div"
+          onClick={() => navigate("/pages/home")}
+          sx={{ fontFamily: SERIF, fontSize: 24, cursor: "pointer", flexGrow: 1 }}
+        >
+          archiive<Box component="span" sx={{ color: "primary.main" }}>.</Box>
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 3 }}>
+          {LINKS.map(({ label, path }) => (
+            <Box
+              key={path}
+              component="button"
+              onClick={() => navigate(path)}
               sx={{
-                flexGrow: 1,
+                ...monoLabel,
+                background: "none",
+                border: 0,
+                padding: "4px 0",
+                cursor: "pointer",
+                color: isActive(path) ? "text.primary" : "text.secondary",
+                borderBottom: 2,
+                borderColor: isActive(path) ? "primary.main" : "transparent",
+                "&:hover": { color: "text.primary" },
               }}
             >
-              ARCHIIVE
-            </Typography>
-            <Button color="inherit" onClick={goToHome}>
-              Home
-            </Button>
-            <Button color="inherit" onClick={goToCloset}>
-              Closet
-            </Button>
-            <Button color="inherit" onClick={goToWishlist}>
-              Wishlist
-            </Button>
-            <Button color="inherit" onClick={goToOutfit}>
-              Outfits
-            </Button>
-            <Button color="inherit" onClick={goToAddItem}>
-              Add Item
-            </Button>
-            <Button color="inherit" onClick={goToSearch}>
-              Search Item
-            </Button>
-            <Box sx={{ ml: 2, display: "flex" }}>
-              <UserButton />
+              {label}
             </Box>
-          </Toolbar>
-        </AppBar>
-      </Box>
-    </React.Fragment>
+          ))}
+        </Box>
+
+        <ModeToggle />
+        <Button variant="contained" onClick={() => navigate("/pages/addItem")}>
+          + Add
+        </Button>
+        <Box sx={{ display: "flex" }}>
+          <UserButton />
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 };
 

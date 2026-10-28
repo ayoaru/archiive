@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import { PageHeader, Gallery } from "../components/Gallery";
 import WishlistItemCard from "../components/WishlistItemCard";
 
 const Wishlist = () => {
@@ -38,19 +38,17 @@ const Wishlist = () => {
 
   return (
     <React.Fragment>
-        <Typography variant="h4" padding={2} paddingLeft={3}>
-          Your Wishlist
-        </Typography>
-      <Stack spacing={2} paddingLeft={2}>
-        {wishlistList.length !== 0 &&
-          wishlistList.map((item) => (
-            <WishlistItemCard
-              key={item._id}
-              item={item}
-              onDeleteSuccess={handleDeleteSuccess}
-            />
-          ))}
-      </Stack>
+      <PageHeader title="The wishlist" count={wishlistList.length} countLabel="wants" />
+      <Gallery>
+        {wishlistList.map((item, i) => (
+          <WishlistItemCard
+            key={item._id}
+            item={item}
+            index={i}
+            onDeleteSuccess={handleDeleteSuccess}
+          />
+        ))}
+      </Gallery>
 
       {/* Success Snackbar */}
       <Snackbar

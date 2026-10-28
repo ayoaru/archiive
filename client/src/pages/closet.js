@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import { PageHeader, Gallery } from "../components/Gallery";
 import ItemCard from "../components/ItemCard";
 
 const Closet = () => {
@@ -38,19 +38,17 @@ const Closet = () => {
 
   return (
     <React.Fragment>
-      <Typography variant="h4" padding={2} paddingLeft={3}>
-        Your Closet
-      </Typography>
-      <Stack spacing={2} paddingLeft={2}>
-        {closetList.length !== 0 &&
-          closetList.map((item) => (
-            <ItemCard
-              key={item._id}
-              item={item}
-              onDeleteSuccess={handleDeleteSuccess}
-            />
-          ))}
-      </Stack>
+      <PageHeader title="The closet" count={closetList.length} />
+      <Gallery>
+        {closetList.map((item, i) => (
+          <ItemCard
+            key={item._id}
+            item={item}
+            index={i}
+            onDeleteSuccess={handleDeleteSuccess}
+          />
+        ))}
+      </Gallery>
 
       {/* Success Snackbar */}
       <Snackbar

@@ -1,26 +1,23 @@
 import React, { useState } from "react";
 import Typography from "@mui/material/Typography";
-import Card from "@mui/material/Card";
-import CardHeader from "@mui/material/CardHeader";
-import CardMedia from "@mui/material/CardMedia";
-import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
-import CardActions from "@mui/material/CardActions";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContentText from "@mui/material/DialogContentText";
-import { Button, Tabs, Tab, Chip } from "@mui/material";
+import Box from "@mui/material/Box";
+import { Button } from "@mui/material";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import ImageIcon from "@mui/icons-material/Image";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { SERIF, monoLabel } from "../theme";
+import { catalogNo } from "./Gallery";
+import { ItemImage, ItemSpecs } from "./ItemCard";
 
 const WishlistItemCard = (props) => {
     const [item] = useState(props.item);
     const [deleteOpen, setDeleteOpen] = useState(false);
-    const [imageTab, setImageTab] = useState(0);
 
     const navigate = useNavigate();
 
@@ -40,133 +37,66 @@ const WishlistItemCard = (props) => {
         }
     };
 
-    const currentImageUrl = imageTab === 0 ? item.imageFrontUrl : item.imageBackUrl;
-
     return (
         <React.Fragment>
-        <Card
-            variant="outlined"
-            sx={{
-                width: 750,
-                display: "flex",
-                flexDirection: "column",
-            }}
-        >
-            <CardHeader
-                title={item.name}
-                subheader={item.price ? `£${item.price}` : ""}
-            />
+        <Box>
+            <ItemImage item={item} />
 
-            {/* Image + Info Row */}
-            <Stack direction="row" spacing={2} sx={{ padding: 2 }}>
-
-                {/* Image with Front/Back Tabs */}
-                <Stack direction="column" spacing={1}>
-                    {(item.imageFrontUrl || item.imageBackUrl) ? (
-                        <>
-                            <Tabs
-                                value={imageTab}
-                                onChange={(e, val) => setImageTab(val)}
-                                variant="fullWidth"
-                                sx={{ minHeight: 32 }}
-                            >
-                                <Tab label="Front" sx={{ minHeight: 32, padding: "4px 8px" }} />
-                                <Tab label="Back" sx={{ minHeight: 32, padding: "4px 8px" }} />
-                            </Tabs>
-                            {currentImageUrl ? (
-                                <CardMedia
-                                    component="img"
-                                    image={currentImageUrl}
-                                    alt={`${item.name} ${imageTab === 0 ? "front" : "back"}`}
-                                    sx={{ width: 200, height: 200, objectFit: "cover", borderRadius: 1 }}
-                                />
-                            ) : (
-                                <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
-                                    <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
-                                    <Typography variant="caption" color="text.secondary">No image</Typography>
-                                </Stack>
-                            )}
-                        </>
-                    ) : (
-                        <Stack alignItems="center" justifyContent="center" sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 1 }}>
-                            <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
-                        </Stack>
-                    )}
-                </Stack>
-
-                {/* Item Details */}
-                <CardContent sx={{ padding: 0, flex: 1 }}>
-                    <Stack direction="column" spacing={1}>
-                        <Typography variant="body1" color="text.primary">
-                            {item.brand}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Category: {item.category}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Season: {item.season}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Style: {item.style}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Primary Color: {item.primary_color}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Secondary Color: {item.secondary_color}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary">
-                            Fit: {item.fit}
-                        </Typography>
-                        {item.link && (
-                            <Chip
-                                label="View Product"
-                                component="a"
-                                href={item.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                clickable
-                                icon={<OpenInNewIcon />}
-                                size="small"
-                                sx={{ width: "fit-content" }}
-                            />
-                        )}
-                    </Stack>
-                </CardContent>
+            <Stack direction="row" justifyContent="space-between" sx={{ mt: 1.5 }}>
+                <Typography sx={{ ...monoLabel, color: "text.secondary" }}>
+                    {catalogNo(props.index ?? 0)} / {item.category || "Uncategorized"}
+                </Typography>
+                {item.price && (
+                    <Typography sx={{ ...monoLabel, color: "primary.main" }}>
+                        £{item.price}
+                    </Typography>
+                )}
             </Stack>
+            <Typography sx={{ fontFamily: SERIF, fontSize: 18, lineHeight: 1.3 }}>
+                {item.name}
+            </Typography>
+            {item.brand && (
+                <Typography variant="body2" color="text.secondary">
+                    {item.brand}
+                </Typography>
+            )}
+            <Box sx={{ mt: 0.5 }}>
+                <ItemSpecs item={item} />
+            </Box>
 
-            {/* Buttons */}
-            <CardActions sx={{ padding: 2 }}>
-                <Stack direction="row" gap={2}>
+            <Stack direction="row" gap={1} sx={{ mt: 1, ml: -1 }}>
+                <Button size="small" onClick={() => handleUpdate(item._id)}>
+                    Edit
+                </Button>
+                <Button size="small" color="error" onClick={() => setDeleteOpen(true)}>
+                    Delete
+                </Button>
+                {item.link && (
                     <Button
-                        color="primary"
-                        variant="contained"
-                        onClick={() => handleUpdate(item._id)}
+                        size="small"
+                        color="inherit"
+                        component="a"
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        endIcon={<OpenInNewIcon sx={{ fontSize: "14px !important" }} />}
                     >
-                        Update
+                        Shop
                     </Button>
-                    <Button
-                        color="error"
-                        variant="contained"
-                        onClick={() => setDeleteOpen(true)}
-                    >
-                        Delete
-                    </Button>
-                </Stack>
-            </CardActions>
-
-        </Card>
+                )}
+            </Stack>
+        </Box>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
-            <DialogTitle>Delete Item</DialogTitle>
+            <DialogTitle>Delete item</DialogTitle>
             <DialogContent>
                 <DialogContentText>
                     Are you sure you want to delete <strong>{item.name}</strong>? This action cannot be undone.
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setDeleteOpen(false)} color="primary">Cancel</Button>
+                <Button onClick={() => setDeleteOpen(false)} color="inherit">Cancel</Button>
                 <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
             </DialogActions>
         </Dialog>

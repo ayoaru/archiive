@@ -2,6 +2,8 @@ import './App.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/react';
+import { clerkAppearance } from './theme';
+import { ColorModeProvider, useColorMode } from './colorMode';
 import { AxiosAuth } from './auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import { SignInPage, SignUpPage } from './pages/signIn';
@@ -19,6 +21,7 @@ import SearchItem from './pages/searchItem';
 // Lives inside the Router so Clerk can navigate with react-router.
 const ClerkWithRoutes = () => {
   const navigate = useNavigate();
+  const { mode } = useColorMode();
 
   return (
     <ClerkProvider
@@ -28,6 +31,7 @@ const ClerkWithRoutes = () => {
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       afterSignOutUrl="/sign-in"
+      appearance={clerkAppearance(mode)}
     >
       <AxiosAuth />
       <Routes>
@@ -53,11 +57,11 @@ const ClerkWithRoutes = () => {
 
 function App() {
   return (
-    <React.Fragment>
+    <ColorModeProvider>
       <Router>
         <ClerkWithRoutes />
       </Router>
-    </React.Fragment>
+    </ColorModeProvider>
   );
 }
 
