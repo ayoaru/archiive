@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import axios from "axios";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import { PageHeader, Gallery } from "../components/Gallery";
 import { useNavigate } from "react-router-dom";
 import OutfitCard from "../components/OutfitCard";
 
@@ -46,24 +46,22 @@ const Outfit = () => {
 
   return (
     <React.Fragment>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" padding={2} paddingLeft={3} paddingRight={3}>
-        <Typography variant="h4">
-          Your Outfits
-        </Typography>
-        <Button variant="contained" onClick={goToAddOutfit}>
-          + New
-        </Button>
-      </Stack>
-      <Stack spacing={2} paddingLeft={2}>
-        {outfitList.length !== 0 &&
-          outfitList.map((outfit) => (
-            <OutfitCard
-              key={outfit._id}
-              outfit={outfit}
-              onDeleteSuccess={handleDeleteSuccess}
-            />
-          ))}
-      </Stack>
+      <PageHeader
+        title="The outfits"
+        count={outfitList.length}
+        countLabel="looks"
+        action={<Button variant="contained" onClick={goToAddOutfit}>+ New</Button>}
+      />
+      <Gallery>
+        {outfitList.map((outfit, i) => (
+          <OutfitCard
+            key={outfit._id}
+            outfit={outfit}
+            index={i}
+            onDeleteSuccess={handleDeleteSuccess}
+          />
+        ))}
+      </Gallery>
 
       {/* Success Snackbar */}
       <Snackbar

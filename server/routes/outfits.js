@@ -1,6 +1,8 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const upload = require("../middleware/upload");
 const { Outfit } = require("../models/outfit");
+const { Closet } = require("../models/item");
 const {
   uploadToS3,
   deleteFromS3,
@@ -49,16 +51,33 @@ const parseOutfitBody = (body) => ({
   occasion: body.occasion,
 });
 
+// True only if every closet item the outfit references belongs to this user
+const ownsAllItems = async (userId, { base, items }) => {
+  const ids = [...new Set(
+    [base?.top, base?.pants, base?.shoes, ...(items || [])].filter(Boolean).map(String)
+  )];
+  if (!ids.every((id) => mongoose.isValidObjectId(id))) return false;
+
+  const owned = await Closet.countDocuments({ _id: { $in: ids }, userId });
+  return owned === ids.length;
+};
+
+const NOT_YOUR_ITEMS = { error: "Outfit includes items that aren't in your closet" };
+
 // Create a new outfit
 router.post("/outfits/create", uploadPreviewImage, async (req, res) => {
   try {
+    const outfitData = parseOutfitBody(req.body);
+    if (!(await ownsAllItems(req.userId, outfitData))) return res.status(400).json(NOT_YOUR_ITEMS);
+
     let previewImageKey = "";
     if (req.file) {
       previewImageKey = await uploadToS3(req.file.buffer, req.file.mimetype, "outfits");
     }
 
     const newOutfit = await Outfit.create({
-      ...parseOutfitBody(req.body),
+      userId: req.userId,
+      ...outfitData,
       previewImage: previewImageKey,
     });
 
@@ -72,7 +91,7 @@ router.post("/outfits/create", uploadPreviewImage, async (req, res) => {
 // Get all outfits with populated base/items and presigned URLs
 router.get("/outfits/read", async (req, res) => {
   try {
-    const outfits = await populateOutfit(Outfit.find());
+    const outfits = await populateOutfit(Outfit.find({ userId: req.userId }));
     const outfitsWithUrls = await Promise.all(outfits.map(withPresignedUrls));
 
     res.json(outfitsWithUrls);
@@ -85,7 +104,7 @@ router.get("/outfits/read", async (req, res) => {
 // Get a single outfit by id
 router.get("/outfits/get/:id", async (req, res) => {
   try {
-    const outfit = await populateOutfit(Outfit.findById(req.params.id));
+    const outfit = await populateOutfit(Outfit.findOne({ _id: req.params.id, userId: req.userId }));
     if (!outfit) return res.status(404).json({ error: "Outfit not found" });
 
     res.json(await withPresignedUrls(outfit));
@@ -98,8 +117,11 @@ router.get("/outfits/get/:id", async (req, res) => {
 // Update an outfit by id
 router.put("/outfits/update/:id", uploadPreviewImage, async (req, res) => {
   try {
-    const existingOutfit = await Outfit.findById(req.params.id);
+    const existingOutfit = await Outfit.findOne({ _id: req.params.id, userId: req.userId });
     if (!existingOutfit) return res.status(404).json({ error: "Outfit not found" });
+
+    const outfitData = parseOutfitBody(req.body);
+    if (!(await ownsAllItems(req.userId, outfitData))) return res.status(400).json(NOT_YOUR_ITEMS);
 
     const previewImageKey = await handleImageUpdate(
       existingOutfit.previewImage,
@@ -109,8 +131,8 @@ router.put("/outfits/update/:id", uploadPreviewImage, async (req, res) => {
       "outfits"
     );
 
-    await Outfit.findByIdAndUpdate(req.params.id, {
-      ...parseOutfitBody(req.body),
+    await Outfit.findOneAndUpdate({ _id: req.params.id, userId: req.userId }, {
+      ...outfitData,
       previewImage: previewImageKey,
     }, { runValidators: true });
 
@@ -124,11 +146,11 @@ router.put("/outfits/update/:id", uploadPreviewImage, async (req, res) => {
 // Delete an outfit by id
 router.delete("/outfits/delete/:id", async (req, res) => {
   try {
-    const outfit = await Outfit.findById(req.params.id);
+    const outfit = await Outfit.findOne({ _id: req.params.id, userId: req.userId });
     if (!outfit) return res.status(404).json({ error: "Outfit not found" });
 
     await deleteFromS3(outfit.previewImage);
-    await Outfit.findByIdAndDelete(req.params.id);
+    await Outfit.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     res.status(200).send("Outfit deleted successfully!");
   } catch (error) {

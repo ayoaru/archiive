@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import Typography from "@mui/material/Typography";
-import Card from "@mui/material/Card";
-import CardMedia from "@mui/material/CardMedia";
-import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
+import Box from "@mui/material/Box";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -13,6 +11,8 @@ import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import ItemCollage from "./ItemCollage";
+import { SERIF, monoLabel } from "../theme";
+import { catalogNo } from "./Gallery";
 
 // The outfit's required base slots, in display order
 const BASE_SLOTS = [
@@ -48,83 +48,73 @@ const OutfitCard = (props) => {
         item: outfit.base?.[key] || null,
     }));
 
+    const tags = [outfit.season, outfit.occasion].filter(Boolean).join(" · ");
+
     return (
         <React.Fragment>
-        <Card
-            variant="outlined"
-            sx={{
-                width: 750,
-                display: "flex",
-                flexDirection: "column",
-            }}
-        >
-            <Stack direction="row" spacing={2} sx={{ padding: 2 }}>
+        <Box>
+            {/* Outfit Image */}
+            <Box
+                onClick={handleUpdate}
+                sx={{
+                    aspectRatio: "3 / 4",
+                    cursor: "pointer",
+                    outline: "1px solid transparent",
+                    transition: "outline-color 120ms",
+                    "&:hover": { outlineColor: "primary.main" },
+                }}
+            >
+                {outfit.previewImageUrl ? (
+                    <Box
+                        component="img"
+                        src={outfit.previewImageUrl}
+                        alt={outfit.name}
+                        sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                ) : (
+                    <ItemCollage
+                        items={[outfit.base?.top, outfit.base?.pants, outfit.base?.shoes]}
+                        size="100%"
+                    />
+                )}
+            </Box>
 
-                {/* Outfit Image + Actions */}
-                <Stack direction="column" spacing={1} alignItems="center">
-                    {outfit.previewImageUrl ? (
-                        <CardMedia
-                            component="img"
-                            image={outfit.previewImageUrl}
-                            alt={outfit.name}
-                            sx={{ width: 200, height: 200, objectFit: "cover", borderRadius: 1 }}
-                        />
-                    ) : (
-                        <ItemCollage
-                            items={[outfit.base?.top, outfit.base?.pants, outfit.base?.shoes]}
-                            size={200}
-                        />
-                    )}
-                    <Stack direction="row" gap={1}>
-                        <Button
-                            size="small"
-                            color="primary"
-                            variant="contained"
-                            onClick={handleUpdate}
-                        >
-                            Update
-                        </Button>
-                        <Button
-                            size="small"
-                            color="error"
-                            variant="contained"
-                            onClick={() => setDeleteOpen(true)}
-                        >
-                            Delete
-                        </Button>
-                    </Stack>
+            {/* Name + At-a-glance Items */}
+            <Typography sx={{ ...monoLabel, color: "text.secondary", mt: 1.5 }}>
+                Look {catalogNo(props.index ?? 0)}{tags && ` / ${tags}`}
+            </Typography>
+            <Typography sx={{ fontFamily: SERIF, fontSize: 18, lineHeight: 1.3, mb: 0.5 }}>
+                {outfit.name || "Untitled outfit"}
+            </Typography>
+            {glanceItems.map(({ label, item }) => (
+                <Stack key={label} direction="row" gap={1} sx={{ ...monoLabel, fontSize: 10 }}>
+                    <Box component="span" sx={{ color: "text.disabled", width: 44 }}>{label}</Box>
+                    <Box component="span" sx={{ color: item ? "text.secondary" : "text.disabled" }}>
+                        {item ? item.name : "—"}
+                    </Box>
                 </Stack>
+            ))}
 
-                {/* Name + At-a-glance Items */}
-                <CardContent sx={{ padding: 0, flex: 1 }}>
-                    <Typography variant="h6" gutterBottom>
-                        {outfit.name || "Untitled Outfit"}
-                    </Typography>
-                    <Stack direction="column" spacing={1}>
-                        {glanceItems.map(({ label, item }) => (
-                            <Typography
-                                key={label}
-                                variant="body1"
-                                color={item ? "text.primary" : "text.disabled"}
-                            >
-                                {label}: {item ? item.name : "—"}
-                            </Typography>
-                        ))}
-                    </Stack>
-                </CardContent>
+            <Stack direction="row" gap={1} sx={{ mt: 1, ml: -1 }}>
+                <Button size="small" onClick={handleUpdate}>
+                    Edit
+                </Button>
+                <Button size="small" color="error" onClick={() => setDeleteOpen(true)}>
+                    Delete
+                </Button>
             </Stack>
-        </Card>
+        </Box>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
-            <DialogTitle>Delete Outfit</DialogTitle>
+            <DialogTitle>Delete outfit</DialogTitle>
             <DialogContent>
                 <DialogContentText>
                     Are you sure you want to delete <strong>{outfit.name || "this outfit"}</strong>? This action cannot be undone.
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setDeleteOpen(false)} color="primary">Cancel</Button>
+                <Button onClick={() => setDeleteOpen(false)} color="inherit">Cancel</Button>
                 <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
             </DialogActions>
         </Dialog>

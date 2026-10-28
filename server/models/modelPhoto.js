@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const modelPhotoSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
     label: { type: String, default: '' },
     image: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },

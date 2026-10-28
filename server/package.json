@@ -14,6 +14,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1061.0",
     "@aws-sdk/s3-request-presigner": "^3.1061.0",
+    "@clerk/express": "^2.1.75",
     "axios": "^1.17.0",
     "cheerio": "^1.1.0",
     "cloudinary": "^1.41.3",

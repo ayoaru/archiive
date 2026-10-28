@@ -20,7 +20,7 @@ const ItemCollage = ({ items = [], size = 200 }) => {
                     justifyContent: "center",
                 }}
             >
-                <ImageIcon sx={{ fontSize: size / 3, color: "grey.400" }} />
+                <ImageIcon sx={{ fontSize: typeof size === "number" ? size / 3 : 56, color: "grey.400" }} />
             </Box>
         );
     }
