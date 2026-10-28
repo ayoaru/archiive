@@ -26,10 +26,14 @@ const itemsRouter = require("./routes/items.js");
 const outfitsRouter = require("./routes/outfits.js");
 const modelPhotosRouter = require("./routes/modelPhotos.js");
 const imageProxyRouter = require("./routes/imageProxy.js");
+const ratesRouter = require("./routes/rates.js");
+const itemImagesRouter = require("./routes/itemImages.js");
 app.use("/", itemsRouter);
 app.use("/", outfitsRouter);
 app.use("/", modelPhotosRouter);
 app.use("/", imageProxyRouter);
+app.use("/", ratesRouter);
+app.use("/", itemImagesRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Grid, Paper, TextField, Typography, Button, Box } from "@mui/material";
+import { Grid, Paper, TextField, Typography, Button } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
-import ImageIcon from "@mui/icons-material/Image";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { styled } from "@mui/system";
 import axios from "axios";
+import ImageSlot, { useCutout } from "./ImageSlot";
+import { preloadCutoutModel, restoreOriginal, saveCutout } from "../imageCleanup";
 
 const categories = [
   { value: "Tops", label: "Tops" },
@@ -32,18 +30,6 @@ const fit = [
   { value: "Oversized", label: "Oversized" }
 ];
 
-const VisuallyHiddenInput = styled("input")({
-  clip: "rect(0 0 0 0)",
-  clipPath: "inset(50%)",
-  height: 1,
-  overflow: "hidden",
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  whiteSpace: "nowrap",
-  width: 1,
-});
-
 const UpdateItemComponent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -66,6 +52,29 @@ const UpdateItemComponent = () => {
   const [frontPreview, setFrontPreview] = useState(null);
   const [backPreview, setBackPreview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Background removal. `originals` holds the untouched photos' URLs for sides
+  // that are currently saved as cutouts; the switch starts on for those.
+  const [originals, setOriginals] = useState({ front: "", back: "" });
+  const [removeBgFront, setRemoveBgFront] = useState(false);
+  const [removeBgBack, setRemoveBgBack] = useState(false);
+
+  // A side is "already clean" while its saved cutout is left untouched
+  const frontAlreadyClean = Boolean(originals.front) && !frontFile && itemData.imageFront !== "";
+  const backAlreadyClean = Boolean(originals.back) && !backFile && itemData.imageBack !== "";
+  const frontCutout = useCutout(
+    frontAlreadyClean ? null : frontFile || (itemData.imageFront ? frontPreview : null),
+    removeBgFront
+  );
+  const backCutout = useCutout(
+    backAlreadyClean ? null : backFile || (itemData.imageBack ? backPreview : null),
+    removeBgBack
+  );
+
+  useEffect(() => {
+    preloadCutoutModel();
+  }, []);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -85,6 +94,9 @@ const UpdateItemComponent = () => {
           imageBack: item.imageBack || "",
         });
         if (item.imageFrontUrl) setFrontPreview(item.imageFrontUrl);
+        setOriginals({ front: item.imageFrontOriginalUrl || "", back: item.imageBackOriginalUrl || "" });
+        setRemoveBgFront(Boolean(item.imageFrontOriginal));
+        setRemoveBgBack(Boolean(item.imageBackOriginal));
         if (item.imageBackUrl) setBackPreview(item.imageBackUrl);
       } catch (error) {
         console.error("Error fetching item:", error);
@@ -106,6 +118,7 @@ const UpdateItemComponent = () => {
     if (file) {
       if (frontPreview) URL.revokeObjectURL(frontPreview);
       setFrontFile(file);
+      setRemoveBgFront(true);
       setFrontPreview(URL.createObjectURL(file));
       setItemData({ ...itemData, imageFront: "" });
     }
@@ -116,6 +129,7 @@ const UpdateItemComponent = () => {
     if (file) {
       if (backPreview) URL.revokeObjectURL(backPreview);
       setBackFile(file);
+      setRemoveBgBack(true);
       setBackPreview(URL.createObjectURL(file));
       setItemData({ ...itemData, imageBack: "" });
     }
@@ -136,6 +150,7 @@ const UpdateItemComponent = () => {
   };
 
   const updateItem = async () => {
+    setSaving(true);
     try {
       const formData = new FormData();
 
@@ -162,35 +177,33 @@ const UpdateItemComponent = () => {
       });
 
       if (response.status === 200) {
+        // Then apply the cutout switches: save new cutouts, or restore an original
+        const sides = [
+          { side: "front", hasPhoto: frontFile || itemData.imageFront !== "", removeBg: removeBgFront, alreadyClean: frontAlreadyClean, cutout: frontCutout },
+          { side: "back", hasPhoto: backFile || itemData.imageBack !== "", removeBg: removeBgBack, alreadyClean: backAlreadyClean, cutout: backCutout },
+        ];
+        for (const { side, hasPhoto, removeBg, alreadyClean, cutout } of sides) {
+          if (!hasPhoto) continue;
+          try {
+            if (alreadyClean) {
+              if (!removeBg) await restoreOriginal("closet", id, side);
+            } else if (removeBg) {
+              const blob = await cutout.result();
+              if (blob) await saveCutout("closet", id, side, blob);
+            }
+          } catch (e) {
+            // The item itself saved; it just keeps its current photo
+            console.log(e);
+          }
+        }
         navigate("/pages/closet");
       }
     } catch (error) {
       console.error("Error updating closet item:", error);
+    } finally {
+      setSaving(false);
     }
   };
-
-  // Reusable image panel
-  const ImagePanel = ({ label, preview, onFileChange, onRemove }) => (
-    <Grid container direction="column" alignItems="center" gap={1}>
-      <Typography variant="subtitle1" fontWeight="bold">{label}</Typography>
-      {preview ? (
-        <img src={preview} width="200" height="200" alt={label} style={{ objectFit: "cover", borderRadius: 8 }} />
-      ) : (
-        <Box sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
-        </Box>
-      )}
-      <Grid container direction="row" gap={1} justifyContent="center">
-        <Button component="label" variant="contained" color="primary" size="small" startIcon={<CloudUploadIcon />}>
-          Upload
-          <VisuallyHiddenInput type="file" accept="image/*" onChange={onFileChange} />
-        </Button>
-        <Button color="error" variant="contained" size="small" startIcon={<DeleteIcon />} onClick={onRemove}>
-          Remove
-        </Button>
-      </Grid>
-    </Grid>
-  );
 
   if (loading) return <Typography sx={{ padding: 4 }}>Loading...</Typography>;
 
@@ -204,15 +217,21 @@ const UpdateItemComponent = () => {
 
             {/* Image Upload Row */}
             <Grid container direction="row" justifyContent="center" gap={6}>
-              <ImagePanel
+              <ImageSlot
                 label="Front"
-                preview={frontPreview}
+                previewSrc={frontAlreadyClean && !removeBgFront ? originals.front : frontPreview}
+                cutout={frontCutout}
+                removeBg={removeBgFront}
+                onToggleRemoveBg={setRemoveBgFront}
                 onFileChange={handleFrontFileChange}
                 onRemove={removeFrontImage}
               />
-              <ImagePanel
+              <ImageSlot
                 label="Back"
-                preview={backPreview}
+                previewSrc={backAlreadyClean && !removeBgBack ? originals.back : backPreview}
+                cutout={backCutout}
+                removeBg={removeBgBack}
+                onToggleRemoveBg={setRemoveBgBack}
                 onFileChange={handleBackFileChange}
                 onRemove={removeBackImage}
               />
@@ -282,8 +301,8 @@ const UpdateItemComponent = () => {
               </Grid>
             </Grid>
 
-            <Button variant="contained" color="primary" onClick={updateItem}>
-              Update
+            <Button variant="contained" color="primary" onClick={updateItem} disabled={saving}>
+              {saving ? "Saving…" : "Update"}
             </Button>
 
           </Grid>

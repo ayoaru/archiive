@@ -13,6 +13,7 @@ import ItemCard from "../components/ItemCard";
 import WishlistItemCard from "../components/WishlistItemCard";
 import { Gallery, catalogNo } from "../components/Gallery";
 import { SERIF, monoLabel } from "../theme";
+import { usePriceFormatter } from "../profile";
 
 const SEARCH_FIELDS = ["name", "brand", "category", "season", "style", "primary_color", "secondary_color", "fit"];
 
@@ -60,6 +61,7 @@ const FilterRow = ({ label, children }) => (
 // One row of the archive index
 const IndexRow = ({ item, index, onOpen }) => {
   const dot = swatch(item.primary_color);
+  const formatPrice = usePriceFormatter();
   const cell = { ...monoLabel, color: "text.secondary", display: { xs: "none", md: "block" } };
 
   return (
@@ -123,7 +125,7 @@ const IndexRow = ({ item, index, onOpen }) => {
         <span>{item.primary_color || "—"}</span>
       </Stack>
       <Typography sx={{ ...cell, color: item.source === "wishlist" ? "primary.main" : "text.disabled", textAlign: "right" }}>
-        {item.source === "wishlist" ? `Wishlist${item.price ? ` · £${item.price}` : ""}` : "Closet"}
+        {item.source === "wishlist" ? `Wishlist${item.price ? ` · ${formatPrice(item.price, item.currency).label}` : ""}` : "Closet"}
       </Typography>
 
       <ArrowForwardIcon className="arrow" sx={{ fontSize: 18, color: "text.disabled", transition: "color 120ms, transform 120ms" }} />

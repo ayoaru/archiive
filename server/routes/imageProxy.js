@@ -1,5 +1,7 @@
 const express = require("express");
 const axios = require("axios");
+const { fetchRemoteImage } = require("../utils/safeFetch");
+const { normalizeLink } = require("../utils/linkInput");
 
 const router = express.Router();
 
@@ -30,6 +32,24 @@ router.get("/image-proxy", async (req, res) => {
   } catch (error) {
     console.error("Error proxying image:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Fetches a scraped product photo from another site so the browser can read
+// its pixels for background removal (other sites don't allow that directly).
+// Locked down in utils/safeFetch.js: https, public addresses, images, 10 MB.
+router.get("/image-fetch", async (req, res) => {
+  try {
+    const { url, error } = normalizeLink(req.query.url);
+    if (error) return res.status(400).json({ error });
+
+    const { buffer, contentType } = await fetchRemoteImage(url);
+    res.set("Content-Type", contentType);
+    res.set("Cache-Control", "private, max-age=3600");
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error fetching remote image:", error.message);
+    res.status(400).json({ error: "Couldn't fetch that image" });
   }
 });
 

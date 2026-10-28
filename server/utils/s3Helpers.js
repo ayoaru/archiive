@@ -1,7 +1,7 @@
 const { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { v4: uuidv4 } = require("uuid");
-const axios = require("axios");
+const { fetchRemoteImage } = require("./safeFetch");
 const s3 = require("../config/s3");
 
 // Upload a single image buffer to S3
@@ -25,11 +25,9 @@ const deleteFromS3 = async (key) => {
   }));
 };
 
-// Download a remote image and upload to S3
+// Download a remote image (through the locked-down fetcher) and upload to S3
 const uploadUrlToS3 = async (url, prefix = "items") => {
-  const imageResponse = await axios.get(url, { responseType: "arraybuffer" });
-  const buffer = Buffer.from(imageResponse.data);
-  const contentType = imageResponse.headers["content-type"] || "image/jpeg";
+  const { buffer, contentType } = await fetchRemoteImage(url);
   return await uploadToS3(buffer, contentType, prefix);
 };
 

@@ -1,7 +1,7 @@
-import { createTheme, darken } from "@mui/material/styles";
+import { createTheme, darken, lighten, getContrastRatio } from "@mui/material/styles";
 
-// The one accent color. Keep it here (not in components) so a user-chosen
-// accent can replace it later.
+// Default accent color. Users can pick their own in Settings (see profile.js);
+// components read it from the theme (primary.main), never hardcode it.
 export const ACCENT = "#4D7BFF";
 
 export const SERIF = "'Fraunces', Georgia, serif";
@@ -16,11 +16,9 @@ export const monoLabel = {
     textTransform: "uppercase",
 };
 
-// Raw colors for each mode. The light mode accent is a shade darker so small
-// accent text stays readable on white.
+// Raw colors for each mode
 export const TOKENS = {
     dark: {
-        accent: ACCENT,
         ink: "#0E0E0E",
         paper: "#141414",
         text: "#EDEDED",
@@ -36,7 +34,6 @@ export const TOKENS = {
         },
     },
     light: {
-        accent: darken(ACCENT, 0.15),
         ink: "#FAFAF8",
         paper: "#FFFFFF",
         text: "#111111",
@@ -53,13 +50,29 @@ export const TOKENS = {
     },
 };
 
-export const createAppTheme = (mode) => {
+// Shifts an accent until small accent text is readable on the page background
+// (4.5:1): darker in light mode, lighter in dark mode.
+const readableAccent = (accent, mode) => {
+    const bg = TOKENS[mode].ink;
+    let color = mode === "light" ? darken(accent, 0.15) : accent;
+    for (let i = 0; i < 10 && getContrastRatio(color, bg) < 4.5; i++) {
+        color = mode === "light" ? darken(color, 0.1) : lighten(color, 0.1);
+    }
+    return color;
+};
+
+// Text color on an accent fill: white or near-black, whichever reads better
+const onAccent = (color) =>
+    getContrastRatio(color, "#FFFFFF") >= getContrastRatio(color, "#0E0E0E") ? "#FFFFFF" : "#0E0E0E";
+
+export const createAppTheme = (mode, accent = ACCENT) => {
     const t = TOKENS[mode];
+    const a = readableAccent(accent, mode);
 
     return createTheme({
         palette: {
             mode,
-            primary: { main: t.accent, contrastText: mode === "dark" ? t.ink : "#FFFFFF" },
+            primary: { main: a, contrastText: onAccent(a) },
             secondary: { main: t.text, contrastText: t.ink },
             error: { main: mode === "dark" ? "#FF5A4E" : "#D93025" },
             success: { main: mode === "dark" ? "#3FB97A" : "#1E8E55" },
@@ -85,9 +98,9 @@ export const createAppTheme = (mode) => {
         components: {
             MuiCssBaseline: {
                 styleOverrides: {
-                    ":root": { "--accent": t.accent },
+                    ":root": { "--accent": a },
                     body: { backgroundColor: t.ink },
-                    "::selection": { background: t.accent, color: mode === "dark" ? t.ink : "#FFFFFF" },
+                    "::selection": { background: a, color: onAccent(a) },
                     // Thin square scrollbar: hairline track, grey thumb, accent on hover.
                     // Chrome ignores the ::-webkit rules if scrollbar-color is set, so
                     // the standard properties only apply where webkit ones don't (Firefox).
@@ -97,7 +110,7 @@ export const createAppTheme = (mode) => {
                     "*::-webkit-scrollbar": { width: 8, height: 8 },
                     "*::-webkit-scrollbar-track": { background: t.ink, borderLeft: `1px solid ${t.rule}` },
                     "*::-webkit-scrollbar-thumb": { background: t.grey[400], borderRadius: 0 },
-                    "*::-webkit-scrollbar-thumb:hover": { background: t.accent },
+                    "*::-webkit-scrollbar-thumb:hover": { background: a },
                     "*::-webkit-scrollbar-corner": { background: t.ink },
                 },
             },
@@ -135,12 +148,13 @@ export const createAppTheme = (mode) => {
 };
 
 // Clerk's sign-in and account widgets, matched to the current mode
-export const clerkAppearance = (mode) => {
+export const clerkAppearance = (mode, accent = ACCENT) => {
     const t = TOKENS[mode];
+    const a = readableAccent(accent, mode);
     return {
         variables: {
-            colorPrimary: t.accent,
-            colorPrimaryForeground: mode === "dark" ? t.ink : "#FFFFFF",
+            colorPrimary: a,
+            colorPrimaryForeground: onAccent(a),
             colorBackground: t.paper,
             colorForeground: t.text,
             colorMutedForeground: t.muted,

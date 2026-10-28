@@ -1,19 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Grid, Paper, TextField, Typography, Button, Stepper,
   Step, StepLabel, Dialog, DialogTitle, DialogContent,
   DialogActions, CircularProgress, Box, Chip
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import ImageIcon from "@mui/icons-material/Image";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import DeleteIcon from "@mui/icons-material/Delete";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 import ClosetIcon from "@mui/icons-material/Checkroom";
 import WishlistIcon from "@mui/icons-material/Favorite";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import { styled } from "@mui/system";
 import axios from "axios";
+import { usePreferences, formatPrice } from "../profile";
+import PriceField from "./PriceField";
+import { normalizeLink } from "../linkInput";
+import { SERIF, monoLabel } from "../theme";
+import ImageSlot, { useCutout } from "./ImageSlot";
+import { preloadCutoutModel, saveCutout } from "../imageCleanup";
 
 const steps = ["Choose Type", "Add Link", "Item Details", "Done"];
 
@@ -42,18 +44,6 @@ const fitOptions = [
   { value: "Oversized", label: "Oversized" },
 ];
 
-const VisuallyHiddenInput = styled("input")({
-  clip: "rect(0 0 0 0)",
-  clipPath: "inset(50%)",
-  height: 1,
-  overflow: "hidden",
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  whiteSpace: "nowrap",
-  width: 1,
-});
-
 const defaultItemData = {
   name: "",
   brand: "",
@@ -66,10 +56,12 @@ const defaultItemData = {
   imageFront: "",
   imageBack: "",
   price: "",
+  currency: "", // blank until chosen: falls back to the user's currency
   link: "",
 };
 
 const AddItemComponent = () => {
+  const { currency } = usePreferences();
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [itemType, setItemType] = useState(null);
@@ -81,12 +73,25 @@ const AddItemComponent = () => {
   const [frontPreview, setFrontPreview] = useState(null);
   const [backPreview, setBackPreview] = useState(null);
 
+  // Background removal, on by default; runs as soon as a photo is chosen
+  const [removeBgFront, setRemoveBgFront] = useState(true);
+  const [removeBgBack, setRemoveBgBack] = useState(true);
+  const frontCutout = useCutout(frontFile || itemData.imageFront || null, removeBgFront);
+  const backCutout = useCutout(backFile || itemData.imageBack || null, removeBgBack);
+  const [saving, setSaving] = useState(false);
+  const [cleanupWarning, setCleanupWarning] = useState("");
+
   // Scraped data
   const [url, setUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState("");
   const [scrapedData, setScrapedData] = useState(null);
   const [scrapedImages, setScrapedImages] = useState([]);
+
+  // Fetch the cutout model while the user fills in details
+  useEffect(() => {
+    if (activeStep === 2) preloadCutoutModel();
+  }, [activeStep]);
 
   // Confirmation dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -143,17 +148,26 @@ const AddItemComponent = () => {
 
   // Step 2 — Fetch from URL
   const handleFetchUrl = async () => {
+    // Check the link here first for instant feedback; the server checks again
+    const { url: link, error: linkError } = normalizeLink(url);
+    if (linkError) {
+      setUrlError(linkError);
+      return;
+    }
+    setUrl(link);
     setUrlLoading(true);
     setUrlError("");
     try {
-      const response = await axios.post("/wishlist/create/url", { url });
-      console.log("Scraped data:", response.data);
-      console.log("Images array:", response.data.images);
+      const response = await axios.post("/wishlist/create/url", { url: link });
       setScrapedData(response.data);
       setScrapedImages(response.data.images || []);
       setConfirmOpen(true);
     } catch (error) {
-      setUrlError("Could not find product data from this link. You can skip and fill in manually.");
+      // The server explains rejected links and pages it couldn't read
+      setUrlError(
+        error.response?.data?.error ||
+        "Couldn't reach that page. Check your connection, or skip this and fill in the details yourself."
+      );
     } finally {
       setUrlLoading(false);
     }
@@ -202,6 +216,8 @@ const AddItemComponent = () => {
 
   // Step 3 — Save item
   const handleSave = async () => {
+    setSaving(true);
+    setCleanupWarning("");
     try {
       const formData = new FormData();
 
@@ -225,6 +241,7 @@ const AddItemComponent = () => {
           formData.append(key, itemData[key]);
         }
       });
+      formData.set("currency", itemData.currency || currency);
 
       const endpoint = itemType === "closet" ? "/closet/create" : "/wishlist/create";
       const response = await axios.post(endpoint, formData, {
@@ -232,15 +249,46 @@ const AddItemComponent = () => {
       });
 
       if (response.status === 201) {
+        // The item is saved with the original photos; now swap in the cutouts
+        // (the server keeps the originals so they can be restored later)
+        const sides = [
+          { side: "front", hasPhoto: frontFile || itemData.imageFront, removeBg: removeBgFront, cutout: frontCutout },
+          { side: "back", hasPhoto: backFile || itemData.imageBack, removeBg: removeBgBack, cutout: backCutout },
+        ];
+        let failed = 0;
+        for (const { side, hasPhoto, removeBg, cutout } of sides) {
+          if (!hasPhoto || !removeBg) continue;
+          const blob = await cutout.result();
+          if (!blob) {
+            failed++;
+            continue;
+          }
+          try {
+            await saveCutout(itemType, response.data._id, side, blob);
+          } catch (e) {
+            console.log(e);
+            failed++;
+          }
+        }
+        if (failed) {
+          setCleanupWarning(
+            `The background couldn't be removed from ${failed === 1 ? "one photo" : "both photos"}, so the original was kept. You can try again from the item's edit page.`
+          );
+        }
         setActiveStep(3);
       }
     } catch (error) {
       console.error("Error saving item:", error);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleAddAnother = () => {
     setActiveStep(0);
+    setRemoveBgFront(true);
+    setRemoveBgBack(true);
+    setCleanupWarning("");
     setItemType(null);
     setItemData(defaultItemData);
     setFrontFile(null);
@@ -252,34 +300,6 @@ const AddItemComponent = () => {
     setScrapedData(null);
     setScrapedImages([]);
   };
-
-  // Reusable image upload panel
-  const ImageUploadPanel = ({ label, preview, onFileChange, onRemove, onPickFromScrape }) => (
-    <Grid container direction="column" alignItems="center" gap={1}>
-      <Typography variant="subtitle1" fontWeight="bold">{label}</Typography>
-      {preview ? (
-        <img src={preview} width="200" height="200" alt={label} style={{ objectFit: "cover", borderRadius: 8 }} />
-      ) : (
-        <Box sx={{ width: 200, height: 200, bgcolor: "grey.100", borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <ImageIcon sx={{ fontSize: 80, color: "grey.400" }} />
-        </Box>
-      )}
-      <Grid container direction="row" gap={1} justifyContent="center">
-        <Button component="label" variant="contained" color="primary" size="small" startIcon={<CloudUploadIcon />}>
-          Upload
-          <VisuallyHiddenInput type="file" accept="image/*" onChange={onFileChange} />
-        </Button>
-        {scrapedImages.length > 0 && (
-          <Button variant="outlined" color="primary" size="small" onClick={onPickFromScrape}>
-            Pick from Link
-          </Button>
-        )}
-        <Button color="error" variant="contained" size="small" startIcon={<DeleteIcon />} onClick={onRemove}>
-          Remove
-        </Button>
-      </Grid>
-    </Grid>
-  );
 
   return (
     <Grid container alignContent="center" justifyContent="center" style={{ paddingTop: "50px" }}>
@@ -326,13 +346,22 @@ const AddItemComponent = () => {
             </Typography>
             <Grid container justifyContent="center" gap={2} alignItems="center">
               <TextField
-                label="Product URL" variant="outlined" sx={{ width: 500 }}
-                value={url} onChange={(e) => setUrl(e.target.value)}
+                label="Product URL" variant="outlined" sx={{ width: 500, maxWidth: "100%" }}
+                placeholder="https://store.com/products/linen-shirt"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  if (urlError) setUrlError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && url.trim() && !urlLoading) handleFetchUrl();
+                }}
+                inputProps={{ inputMode: "url", autoComplete: "off", spellCheck: false }}
                 error={!!urlError} helperText={urlError}
               />
               <Button
                 variant="contained" color="primary"
-                onClick={handleFetchUrl} disabled={!url || urlLoading}
+                onClick={handleFetchUrl} disabled={!url.trim() || urlLoading}
               >
                 {urlLoading ? <CircularProgress size={24} /> : "Fetch"}
               </Button>
@@ -347,19 +376,29 @@ const AddItemComponent = () => {
 
             {/* Image Upload Row */}
             <Grid container direction="row" justifyContent="center" gap={6}>
-              <ImageUploadPanel
+              <ImageSlot
                 label="Front"
-                preview={frontPreview}
+                previewSrc={frontPreview}
+                cutout={frontCutout}
+                removeBg={removeBgFront}
+                onToggleRemoveBg={setRemoveBgFront}
                 onFileChange={handleFrontFileChange}
                 onRemove={removeFrontImage}
-                onPickFromScrape={() => openImagePicker("front")}
+                extraActions={scrapedImages.length > 0 && (
+                  <Button size="small" onClick={() => openImagePicker("front")}>Pick from link</Button>
+                )}
               />
-              <ImageUploadPanel
+              <ImageSlot
                 label="Back"
-                preview={backPreview}
+                previewSrc={backPreview}
+                cutout={backCutout}
+                removeBg={removeBgBack}
+                onToggleRemoveBg={setRemoveBgBack}
                 onFileChange={handleBackFileChange}
                 onRemove={removeBackImage}
-                onPickFromScrape={() => openImagePicker("back")}
+                extraActions={scrapedImages.length > 0 && (
+                  <Button size="small" onClick={() => openImagePicker("back")}>Pick from link</Button>
+                )}
               />
             </Grid>
 
@@ -393,10 +432,11 @@ const AddItemComponent = () => {
                   {seasons.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </TextField>
                 {itemType === "wishlist" && (
-                  <TextField
-                    label="Price" variant="outlined"
-                    InputLabelProps={{ shrink: true }}
-                    value={itemData.price} name="price" onChange={handleInput}
+                  <PriceField
+                    price={itemData.price}
+                    currency={itemData.currency || currency}
+                    onPriceChange={handleInput}
+                    onCurrencyChange={(code) => setItemData((prev) => ({ ...prev, currency: code }))}
                   />
                 )}
               </Grid>
@@ -434,8 +474,8 @@ const AddItemComponent = () => {
               </Grid>
             </Grid>
 
-            <Button variant="contained" color="primary" onClick={handleSave}>
-              Save
+            <Button variant="contained" color="primary" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
             </Button>
           </Grid>
         )}
@@ -445,6 +485,11 @@ const AddItemComponent = () => {
           <Grid container direction="column" alignItems="center" gap={4}>
             <CelebrationIcon sx={{ fontSize: 150, color: "primary.main" }} />
             <Typography variant="h4">Item added successfully!</Typography>
+            {cleanupWarning && (
+              <Typography variant="body2" color="error.main" sx={{ maxWidth: 520, textAlign: "center" }}>
+                {cleanupWarning}
+              </Typography>
+            )}
             <Typography variant="body1" color="text.secondary">
               What would you like to do next?
             </Typography>
@@ -465,16 +510,39 @@ const AddItemComponent = () => {
       <Dialog open={confirmOpen} onClose={handleRejectScraped}>
         <DialogTitle>Does this look right?</DialogTitle>
         <DialogContent>
-          <Grid container direction="column" alignItems="center" gap={2}>
+          {/* Clamped so odd store data can never stretch the dialog */}
+          <Grid container direction="column" alignItems="center" gap={1.5} sx={{ minWidth: 0 }}>
             {scrapedData?.imageFront && (
-              <img src={scrapedData.imageFront} alt={scrapedData?.name} width="200" height="200" style={{ objectFit: "cover", borderRadius: 8 }} />
+              <Box
+                component="img"
+                src={scrapedData.imageFront}
+                alt={scrapedData?.name}
+                sx={{ width: 200, aspectRatio: "3 / 4", objectFit: "contain", bgcolor: "grey.100", mb: 1 }}
+              />
             )}
-            <Typography variant="h6">{scrapedData?.name}</Typography>
             {scrapedData?.brand && (
-              <Typography variant="body1" color="text.secondary">{scrapedData.brand}</Typography>
+              <Typography noWrap sx={{ ...monoLabel, color: "text.secondary", maxWidth: 360 }}>{scrapedData.brand}</Typography>
             )}
+            <Typography
+              sx={{
+                fontFamily: SERIF,
+                fontSize: 22,
+                lineHeight: 1.25,
+                textAlign: "center",
+                maxWidth: 360,
+                overflowWrap: "anywhere",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {scrapedData?.name}
+            </Typography>
             {scrapedData?.price && (
-              <Typography variant="body1" color="text.secondary">£{scrapedData.price}</Typography>
+              <Typography sx={{ ...monoLabel, color: "primary.main" }}>
+                {formatPrice(scrapedData.price, scrapedData.currency || currency)}
+              </Typography>
             )}
           </Grid>
         </DialogContent>

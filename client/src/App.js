@@ -5,6 +5,7 @@ import { ClerkProvider } from '@clerk/react';
 import { clerkAppearance } from './theme';
 import { ColorModeProvider, useColorMode } from './colorMode';
 import { AxiosAuth } from './auth';
+import { AccentSync } from './profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { SignInPage, SignUpPage } from './pages/signIn';
 import Home from './pages/home';
@@ -17,11 +18,12 @@ import UpdateItem from './pages/updateItem';
 import UpdateOutfit from './pages/updateOutfit';
 import UpdateWishlistItem from './pages/updateWishlistItem';
 import SearchItem from './pages/searchItem';
+import Settings from './pages/settings';
 
 // Lives inside the Router so Clerk can navigate with react-router.
 const ClerkWithRoutes = () => {
   const navigate = useNavigate();
-  const { mode } = useColorMode();
+  const { mode, accent } = useColorMode();
 
   return (
     <ClerkProvider
@@ -31,9 +33,10 @@ const ClerkWithRoutes = () => {
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       afterSignOutUrl="/sign-in"
-      appearance={clerkAppearance(mode)}
+      appearance={clerkAppearance(mode, accent)}
     >
       <AxiosAuth />
+      <AccentSync />
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
@@ -46,6 +49,7 @@ const ClerkWithRoutes = () => {
           <Route path="/pages/addOutfit" element={<AddOutfit />} />
           <Route path="/pages/addItem" element={<AddItem />} />
           <Route path="/pages/searchItem" element={<SearchItem />} />
+          <Route path="/pages/settings" element={<Settings />} />
           <Route path="/closet/update/:id" element={<UpdateItem />} />
           <Route path="/outfit/update/:id" element={<UpdateOutfit />} />
           <Route path="/wishlist/update/:id" element={<UpdateWishlistItem />} />

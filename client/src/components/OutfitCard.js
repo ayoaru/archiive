@@ -2,17 +2,13 @@ import React, { useState } from "react";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContentText from "@mui/material/DialogContentText";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import ItemCollage from "./ItemCollage";
 import { SERIF, monoLabel } from "../theme";
 import { catalogNo } from "./Gallery";
+import { DeleteDialog } from "./DeleteFeedback";
 
 // The outfit's required base slots, in display order
 const BASE_SLOTS = [
@@ -31,16 +27,11 @@ const OutfitCard = (props) => {
         navigate("/outfit/update/" + outfit._id);
     };
 
-    const handleDeleteConfirm = async () => {
-        try {
-            const response = await axios.delete("/outfits/delete/" + outfit._id);
-            if (response.status === 200) {
-                setDeleteOpen(false);
-                props.onDeleteSuccess(outfit.name);
-            }
-        } catch (e) {
-            console.log(e);
-        }
+    // Throws on failure so the dialog can show the error
+    const handleDelete = async () => {
+        await axios.delete("/outfits/delete/" + outfit._id);
+        setDeleteOpen(false);
+        props.onDeleteSuccess(outfit.name);
     };
 
     const glanceItems = BASE_SLOTS.map(({ key, label }) => ({
@@ -105,19 +96,13 @@ const OutfitCard = (props) => {
             </Stack>
         </Box>
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
-            <DialogTitle>Delete outfit</DialogTitle>
-            <DialogContent>
-                <DialogContentText>
-                    Are you sure you want to delete <strong>{outfit.name || "this outfit"}</strong>? This action cannot be undone.
-                </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={() => setDeleteOpen(false)} color="inherit">Cancel</Button>
-                <Button onClick={handleDeleteConfirm} color="error" variant="contained">Delete</Button>
-            </DialogActions>
-        </Dialog>
+        <DeleteDialog
+            open={deleteOpen}
+            onClose={() => setDeleteOpen(false)}
+            onConfirm={handleDelete}
+            name={outfit.name || "this outfit"}
+            from="your outfits"
+        />
 
         </React.Fragment>
     );

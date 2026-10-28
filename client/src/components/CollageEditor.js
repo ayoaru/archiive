@@ -5,12 +5,10 @@ import CircularProgress from "@mui/material/CircularProgress";
 import ImageIcon from "@mui/icons-material/Image";
 import FlipToFrontIcon from "@mui/icons-material/FlipToFront";
 import FlipToBackIcon from "@mui/icons-material/FlipToBack";
-import { removeBackground } from "@imgly/background-removal";
+import { cleanupImage, loadSourceBlob } from "../imageCleanup";
 
-// Routes an S3 image through our own server so the browser can fetch() it
-// (background removal needs to read pixel data, and the bucket has no CORS policy).
-// Must be absolute — @imgly/background-removal resolves relative URLs against
-// its own CDN base rather than the page origin.
+// Routes an S3 image through our own server so the canvas export can read its
+// pixels (the bucket has no CORS policy).
 const proxiedUrl = (url) => `${window.location.origin}/image-proxy?url=${encodeURIComponent(url)}`;
 
 const loadImage = (src) =>
@@ -20,186 +18,6 @@ const loadImage = (src) =>
         img.onerror = reject;
         img.src = src;
     });
-
-// The segmentation model outputs a soft alpha mask, which leaves light-colored
-// garments (white/cream) looking partially see-through instead of solid.
-// Snap alpha to fully opaque or fully transparent so cutouts read as solid.
-const ALPHA_THRESHOLD = 50;
-
-// Light-on-dark details (e.g. white stripes on a black shoe) sometimes get
-// misclassified as background entirely, punching transparent holes in the
-// middle of an otherwise-solid item. Flood-fill in from the image border —
-// any transparent pixel that's NOT reachable from the border is an enclosed
-// hole rather than real background, so patch it back to opaque.
-const fillEnclosedHoles = (imageData) => {
-    const { width, height, data } = imageData;
-    const total = width * height;
-    const isTransparent = (idx) => data[idx * 4 + 3] === 0;
-
-    const visited = new Uint8Array(total);
-    const stack = new Int32Array(total);
-    let sp = 0;
-
-    const seed = (idx) => {
-        if (isTransparent(idx) && !visited[idx]) {
-            visited[idx] = 1;
-            stack[sp++] = idx;
-        }
-    };
-
-    for (let x = 0; x < width; x++) {
-        seed(x);
-        seed((height - 1) * width + x);
-    }
-    for (let y = 0; y < height; y++) {
-        seed(y * width);
-        seed(y * width + width - 1);
-    }
-
-    while (sp > 0) {
-        const idx = stack[--sp];
-        const x = idx % width;
-        const y = (idx / width) | 0;
-        if (x > 0) seed(idx - 1);
-        if (x < width - 1) seed(idx + 1);
-        if (y > 0) seed(idx - width);
-        if (y < height - 1) seed(idx + width);
-    }
-
-    for (let idx = 0; idx < total; idx++) {
-        if (isTransparent(idx) && !visited[idx]) {
-            data[idx * 4 + 3] = 255;
-        }
-    }
-};
-
-// These product photos sit on a near-uniform studio backdrop, but its color
-// varies by photo (light gray, black, etc). A pure local flood-fill (each
-// pixel compared only to its already-claimed neighbor) turned out to leak:
-// gradual shading within the garment fabric itself forms a chain of small
-// steps that can walk the "background" region deep into the item, even
-// though the far end looks nothing like the real backdrop. So a pixel must
-// satisfy BOTH checks to count as background: close to its claimed neighbor
-// (follows soft gradients in the actual backdrop) AND still within a wider
-// tolerance of the original corner-sampled backdrop color (caps how far the
-// fill is allowed to drift overall, so it can't tunnel into the garment).
-const BG_PATCH = 20;
-const sampleBackgroundColor = ({ width, height, data }) => {
-    const corners = [
-        [0, 0], [width - BG_PATCH, 0], [0, height - BG_PATCH], [width - BG_PATCH, height - BG_PATCH],
-    ];
-    let r = 0, g = 0, b = 0, n = 0;
-    for (const [cx, cy] of corners) {
-        for (let y = cy; y < cy + BG_PATCH; y++) {
-            for (let x = cx; x < cx + BG_PATCH; x++) {
-                const idx = (y * width + x) * 4;
-                r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
-                n++;
-            }
-        }
-    }
-    return [r / n, g / n, b / n];
-};
-
-const LOCAL_COLOR_TOLERANCE = 25;
-const ANCHOR_COLOR_TOLERANCE = 40;
-const floodFillBackgroundMask = ({ width, height, data }, localTolerance, anchorTolerance) => {
-    const total = width * height;
-    const isBackground = new Uint8Array(total);
-    const stack = new Int32Array(total);
-    let sp = 0;
-    const localToleranceSq = localTolerance * localTolerance;
-    const anchorToleranceSq = anchorTolerance * anchorTolerance;
-
-    const [ar, ag, ab] = sampleBackgroundColor({ width, height, data });
-    const withinAnchor = (idx) => {
-        const o = idx * 4;
-        const dr = data[o] - ar, dg = data[o + 1] - ag, db = data[o + 2] - ab;
-        return dr * dr + dg * dg + db * db <= anchorToleranceSq;
-    };
-
-    const closeEnough = (idxA, idxB) => {
-        const a = idxA * 4, b = idxB * 4;
-        const dr = data[a] - data[b], dg = data[a + 1] - data[b + 1], db = data[a + 2] - data[b + 2];
-        return dr * dr + dg * dg + db * db <= localToleranceSq;
-    };
-
-    const claim = (idx) => {
-        isBackground[idx] = 1;
-        stack[sp++] = idx;
-    };
-
-    for (let x = 0; x < width; x++) {
-        if (!isBackground[x] && withinAnchor(x)) claim(x);
-        const bottom = (height - 1) * width + x;
-        if (!isBackground[bottom] && withinAnchor(bottom)) claim(bottom);
-    }
-    for (let y = 0; y < height; y++) {
-        const left = y * width;
-        if (!isBackground[left] && withinAnchor(left)) claim(left);
-        const right = y * width + width - 1;
-        if (!isBackground[right] && withinAnchor(right)) claim(right);
-    }
-
-    while (sp > 0) {
-        const idx = stack[--sp];
-        const x = idx % width;
-        const y = (idx / width) | 0;
-        if (x > 0 && !isBackground[idx - 1] && withinAnchor(idx - 1) && closeEnough(idx, idx - 1)) claim(idx - 1);
-        if (x < width - 1 && !isBackground[idx + 1] && withinAnchor(idx + 1) && closeEnough(idx, idx + 1)) claim(idx + 1);
-        if (y > 0 && !isBackground[idx - width] && withinAnchor(idx - width) && closeEnough(idx, idx - width)) claim(idx - width);
-        if (y < height - 1 && !isBackground[idx + width] && withinAnchor(idx + width) && closeEnough(idx, idx + width)) claim(idx + width);
-    }
-
-    return isBackground;
-};
-
-// The model's own RGB output is unreliable wherever its alpha confidence is
-// low — those pixels often come out as near-black (premultiplied-looking)
-// regardless of the garment's real color. So the model's output is used ONLY
-// to derive an alpha signal; actual pixel colors always come from the
-// original, untouched source image.
-//
-// The model also sometimes excludes large plain-colored regions outright
-// (e.g. a solid dark garment against a light backdrop) rather than just
-// soft-edging them — that's not something thresholding a soft mask can fix,
-// since there's no meaningful alpha there to rescue. As a second signal, any
-// pixel the border-flood-fill couldn't reach (i.e. not connected to the real
-// backdrop) is also treated as foreground, regardless of what the model predicted.
-const cutoutWithOriginalColor = async (maskBlob, originalSrc) => {
-    const [maskBitmap, originalImg] = await Promise.all([
-        createImageBitmap(maskBlob),
-        loadImage(originalSrc),
-    ]);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = maskBitmap.width;
-    canvas.height = maskBitmap.height;
-    const ctx = canvas.getContext("2d");
-
-    // Model's own alpha signal, thresholded to binary.
-    ctx.drawImage(maskBitmap, 0, 0);
-    const modelAlpha = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-    // True original colors, used both as the final pixel source and to derive
-    // the background-flood-fill signal.
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(originalImg, 0, 0, canvas.width, canvas.height);
-    const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const isBackground = floodFillBackgroundMask(original, LOCAL_COLOR_TOLERANCE, ANCHOR_COLOR_TOLERANCE);
-
-    const combined = new ImageData(new Uint8ClampedArray(original.data), canvas.width, canvas.height);
-    for (let i = 0, p = 0; i < combined.data.length; i += 4, p++) {
-        const byModel = modelAlpha[i + 3] >= ALPHA_THRESHOLD;
-        const byColor = !isBackground[p];
-        combined.data[i + 3] = (byModel || byColor) ? 255 : 0;
-    }
-
-    fillEnclosedHoles(combined);
-    ctx.putImageData(combined, 0, 0);
-
-    return await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-};
 
 const defaultPosition = (index, size, w) => {
     const step = size * 0.12;
@@ -214,7 +32,8 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // A Pinterest-style collage stage: drag items freely, click to bring one to
 // front, use the front/back buttons to reorder layers. Background removal
-// runs once per item and is cached for the life of this editor instance.
+// runs once per item (skipped for already-cleaned photos) and is cached for
+// the life of this editor instance.
 const CollageEditor = forwardRef(({ items, size = 500 }, ref) => {
     const [layers, setLayers] = useState([]);
     const [processed, setProcessed] = useState({});
@@ -245,8 +64,11 @@ const CollageEditor = forwardRef(({ items, size = 500 }, ref) => {
 
             setProcessed((prev) => ({ ...prev, [item._id]: { url: null, loading: true, error: false } }));
 
-            removeBackground(proxiedUrl(item.imageFrontUrl))
-                .then((maskBlob) => cutoutWithOriginalColor(maskBlob, proxiedUrl(item.imageFrontUrl)))
+            // Photos cleaned when the item was added are already cutouts
+            const job = item.imageFrontOriginal
+                ? loadSourceBlob(item.imageFrontUrl)
+                : cleanupImage(item.imageFrontUrl, { center: false });
+            job
                 .then((blob) => {
                     const url = URL.createObjectURL(blob);
                     setProcessed((prev) => ({ ...prev, [item._id]: { url, loading: false, error: false } }));

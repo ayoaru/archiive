@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Stack from "@mui/material/Stack";
 import axios from "axios";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import { DeletedToast } from "../components/DeleteFeedback";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/react";
 import ItemCard from "../components/ItemCard";
 import WishlistItemCard from "../components/WishlistItemCard";
 import OutfitCard from "../components/OutfitCard";
 import { SERIF, monoLabel } from "../theme";
+import { useDisplayName } from "../profile";
 
 const SEASONS = ["Spring", "Summer", "Fall", "Winter"];
 
@@ -121,10 +120,10 @@ const Home = () => {
   const [deletedItemName, setDeletedItemName] = useState("");
   const [season, setSeason] = useState(currentSeason);
 
-  const { user } = useUser();
+  const displayName = useDisplayName();
   const navigate = useNavigate();
-  const firstName = user?.firstName ? `, ${user.firstName}` : "";
-  const greeting = useMemo(() => randomizeMessage(firstName), [firstName]);
+  const nameSuffix = displayName ? `, ${displayName}` : "";
+  const greeting = useMemo(() => randomizeMessage(nameSuffix), [nameSuffix]);
 
   useEffect(() => {
     getAll();
@@ -148,11 +147,6 @@ const Home = () => {
     setDeletedItemName(itemName);
     setSnackbarOpen(true);
     getAll();
-  };
-
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === "clickaway") return;
-    setSnackbarOpen(false);
   };
 
   const outfits = forSeason(outfitList, season);
@@ -267,36 +261,7 @@ const Home = () => {
 
       <Box sx={{ height: 64 }} />
 
-      {/* Success Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity="success"
-          variant="filled"
-          sx={{ width: "100%", padding: 0, overflow: "hidden" }}
-        >
-          <Stack sx={{ padding: "6px 16px 10px 16px" }}>
-            <strong>{deletedItemName}</strong> was successfully deleted.
-          </Stack>
-          <Box
-            sx={{
-              height: 4,
-              width: "100%",
-              backgroundColor: "rgba(255,255,255,0.4)",
-              "@keyframes countdown": {
-                from: { width: "100%" },
-                to: { width: "0%" },
-              },
-              animation: snackbarOpen ? "countdown 3s linear forwards" : "none",
-            }}
-          />
-        </Alert>
-      </Snackbar>
+      <DeletedToast open={snackbarOpen} name={deletedItemName} onClose={() => setSnackbarOpen(false)} />
 
     </React.Fragment>
   );

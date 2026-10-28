@@ -12,6 +12,12 @@ const closetItemSchema = new mongoose.Schema({
     fit: { type: String, default: '' },
     imageFront: { type: String, default: '' },
     imageBack: { type: String, default: '' },
+    // Untouched photos kept when imageFront/imageBack hold a background-removed cutout
+    imageFrontOriginal: { type: String, default: '' },
+    imageBackOriginal: { type: String, default: '' },
+    // Set when the user restored the original, so bulk cleanup leaves it alone
+    skipCutoutFront: { type: Boolean, default: false },
+    skipCutoutBack: { type: Boolean, default: false },
 });
 
 const wishlistItemSchema = new mongoose.Schema({
@@ -26,7 +32,15 @@ const wishlistItemSchema = new mongoose.Schema({
     fit: { type: String, default: '' },
     imageFront: { type: String, default: '' },
     imageBack: { type: String, default: '' },
+    // Untouched photos kept when imageFront/imageBack hold a background-removed cutout
+    imageFrontOriginal: { type: String, default: '' },
+    imageBackOriginal: { type: String, default: '' },
+    // Set when the user restored the original, so bulk cleanup leaves it alone
+    skipCutoutFront: { type: Boolean, default: false },
+    skipCutoutBack: { type: Boolean, default: false },
     price: { type: String, default: '' },
+    // ISO 4217 code the price is listed in; blank on items saved before this was tracked
+    currency: { type: String, default: '' },
     link: { type: String, default: '' },
 });
 

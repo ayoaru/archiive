@@ -8,6 +8,7 @@ import Button from "@mui/material/Button";
 import { UserButton } from "@clerk/react";
 import { SERIF, monoLabel } from "../theme";
 import ModeToggle from "./ModeToggle";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 const LINKS = [
   { label: "Home", path: "/pages/home" },
@@ -26,7 +27,7 @@ const NavBar = () => {
 
   return (
     <AppBar position="static" sx={{ borderBottom: 1, borderColor: "divider" }}>
-      <Toolbar sx={{ gap: 3, px: { xs: 2, sm: 4 } }}>
+      <Toolbar sx={{ gap: { xs: 2, md: 3 }, px: { xs: 2, sm: 4 }, flexWrap: { xs: "wrap", md: "nowrap" } }}>
         <Typography
           component="div"
           onClick={() => navigate("/pages/home")}
@@ -35,7 +36,17 @@ const NavBar = () => {
           archiive<Box component="span" sx={{ color: "primary.main" }}>.</Box>
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 3 }}>
+        {/* Below md the links drop to their own scrollable row under the logo */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 3,
+            order: { xs: 1, md: 0 },
+            width: { xs: "100%", md: "auto" },
+            overflowX: { xs: "auto", md: "visible" },
+            pb: { xs: 1, md: 0 },
+          }}
+        >
           {LINKS.map(({ label, path }) => (
             <Box
               key={path}
@@ -63,7 +74,15 @@ const NavBar = () => {
           + Add
         </Button>
         <Box sx={{ display: "flex" }}>
-          <UserButton />
+          <UserButton>
+            <UserButton.MenuItems>
+              <UserButton.Link
+                label="Settings"
+                labelIcon={<SettingsOutlinedIcon sx={{ fontSize: 16 }} />}
+                href="/pages/settings"
+              />
+            </UserButton.MenuItems>
+          </UserButton>
         </Box>
       </Toolbar>
     </AppBar>
